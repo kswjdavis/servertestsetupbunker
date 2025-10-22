@@ -252,3 +252,97 @@ The web interface should be utilitarian and operator-focused - think "industrial
 - **CORS**: FastAPI configured to allow React frontend origin during development, locked down for production
 
 ---
+
+## Epic List
+
+### Epic 1: Foundation & Device Communication
+**Goal:** Establish project infrastructure and prove ESP32 devices can securely connect to cloud server, authenticate, and report status.
+
+### Epic 2: Safety & Control Loop
+**Goal:** Implement core safety architecture including dead-man timer, relay control, watchdog, fail-safe behavior, weather integration, and control logic.
+
+### Epic 3: Web UI Dashboard & Device Management
+**Goal:** Build operator interface for device provisioning, WiFi setup, map-based monitoring, and emergency controls.
+
+### Epic 4: Bunker Visualization & Configuration
+**Goal:** Add detailed bunker views with fan layout diagrams, wind visualization, per-bunker configuration, and energy savings tracking.
+
+### Epic 5: Advanced Features & Deployment Tools
+**Goal:** Add time-window overrides, printable deployment guides, LED identification system, and production-ready configuration options.
+
+---
+
+## Epic Story Summary
+
+**Note:** Detailed user stories with acceptance criteria for all 5 epics have been defined during PRD creation. Summary:
+
+- **Epic 1:** 8 stories (Foundation & Device Communication)
+- **Epic 2:** 9 stories (Safety & Control Loop)
+- **Epic 3:** 9 stories (Web UI Dashboard & Device Management)
+- **Epic 4:** 9 stories (Bunker Visualization & Configuration)
+- **Epic 5:** 9 stories (Advanced Features & Deployment Tools)
+
+**Total:** 44 user stories with detailed acceptance criteria
+
+**Work Distribution:**
+- **Jeff (ESP32 Firmware):** ~18 stories across all epics
+- **Will (React UI):** ~16 stories concentrated in Epics 3-5
+- **Shared (Backend/Infrastructure):** ~10 stories in Epics 1-2
+
+---
+
+## Checklist Results Report
+
+### PM Checklist Validation - PASSED
+
+**PRD Completeness:** 95%
+**MVP Scope:** Just Right
+**Readiness:** READY FOR ARCHITECTURE PHASE
+
+**Strengths:**
+- Clear problem definition with safety-first design
+- Comprehensive functional and non-functional requirements
+- Logical epic sequencing with clear value delivery
+- Appropriate technical stack for POC scope
+- Excellent work division clarity (Jeff/Will/Shared)
+
+**Recommendations:**
+- None critical - PRD is ready for implementation
+- Optional: Add end-user persona profile for additional context
+- Optional: Define explicit rollback criteria if POC doesn't meet goals
+
+---
+
+## Next Steps
+
+### Architect Prompt
+
+**Task:** Review this PRD and create a comprehensive architecture document.
+
+**Focus Areas:**
+1. Database schema design for devices, bunkers, fan layouts, and event tracking
+2. FastAPI application structure and API endpoint design
+3. React component architecture for map-based UI and bunker diagrams
+4. ESP32 firmware architecture: FreeRTOS tasks, timer management, state machines
+5. Security implementation: TLS/HTTPS, token auth, credential storage
+6. Deployment architecture: Nginx reverse proxy, systemd services, PostgreSQL setup
+
+**Deliverables:** Architecture document with system diagrams, component specifications, and implementation guidance for Jeff and Will.
+
+---
+
+### UX Expert Prompt
+
+**Task:** Create wireframes and interaction flows for the web UI based on this PRD.
+
+**Focus Areas:**
+1. Device provisioning wizard flow
+2. Map dashboard with bunker markers and wind overlay
+3. Bunker detail page with fan layout diagram
+4. Settings pages for configuration (thresholds, schedules, energy calc)
+5. Emergency controls and status indicators
+6. Mobile/tablet responsiveness
+
+**Deliverables:** Wireframes, user flows, and interaction specifications aligned with the "functional agricultural aesthetic" design goals.
+
+---

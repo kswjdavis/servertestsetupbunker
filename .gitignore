@@ -1,3 +1,8 @@
 # BMAD (local only)
 .bmad-core/
 .bmad-*/
+.claude/commands/BMad
+.claude/commands/BMad
+.claude/commands/BMad/tasks
+web-bundles
+AGENTS.md
