@@ -1,0 +1,11 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+sqlalchemy>=2.0.0
+psycopg[binary]
+pydantic>=2.0.0
+python-jose[cryptography]
+passlib[bcrypt]
+httpx
+alembic
+pytest>=7.0.0
+pytest-asyncio

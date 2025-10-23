@@ -12,6 +12,36 @@ AGENTS.md
 .ai/*.log
 .ai/.DS_Store
 
+# Runtime artifacts
+node_modules/
+dist/
+build/
+.vite/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+.pycache/
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.env.*
+server/.env
+web/.env.local
+
+# ESP-IDF build outputs
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+
+# macOS / IDE cruft
+.DS_Store
+
 # Keep BMAD core config, agents, tasks, templates tracked
 # !.bmad-core/
 # !.bmad-core/**/*

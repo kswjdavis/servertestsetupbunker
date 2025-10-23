@@ -1,0 +1,22 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "wifi_manager.c"
+        "nvs_storage.c"
+        "provisioning.c"
+        "status_client.c"
+        "time_sync.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        esp_wifi
+        esp_event
+        esp_netif
+        nvs_flash
+        esp_http_server
+        esp_http_client
+        esp_tls
+        esp_timer
+        cjson
+    EMBED_TXTFILES
+        "certs/root_cert.pem"
+)
