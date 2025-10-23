@@ -38,7 +38,7 @@ The Bunker Colab system is a **distributed IoT architecture** combining cloud se
 
 ### Platform and Infrastructure Choice
 
-**Platform:** DigitalOcean Droplet (Ubuntu 22.04 LTS)
+**Platform:** DigitalOcean Droplet (Ubuntu 24.04 LTS)
 
 **Key Services:**
 - **Compute:** Single droplet (2GB RAM / 1 vCPU for POC, scalable to 4GB if needed)
@@ -2686,7 +2686,7 @@ VITE_API_BASE_URL=http://localhost:8000/api/v1
 
 **Droplet Specifications:**
 - **Size:** Basic plan (2GB RAM / 1 vCPU) - $12/month
-- **OS:** Ubuntu 22.04 LTS
+- **OS:** Ubuntu 24.04 LTS
 - **Region:** NYC3 or SFO3 (proximity to Great Plains)
 - **Firewall:** Ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
 

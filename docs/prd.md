@@ -220,7 +220,7 @@ The web interface should be utilitarian and operator-focused - think "industrial
 **DigitalOcean Droplet (Manual Deployment)**
 
 **Server Setup:**
-- Ubuntu 22.04 LTS Droplet
+- Ubuntu 24.04 LTS Droplet
 - Nginx reverse proxy (handle HTTPS, serve React static files, proxy API to FastAPI)
 - Let's Encrypt SSL certificate (via certbot)
 - FastAPI running as systemd service with uvicorn
