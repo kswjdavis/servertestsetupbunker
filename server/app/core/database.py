@@ -16,14 +16,23 @@ DATABASE_URL = os.getenv(
 )
 
 # Create async engine with connection pooling
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,  # Set to True for SQL query logging
-    pool_pre_ping=True,  # Enable connection health checks
-    pool_size=5,  # Maximum number of connections in pool
-    max_overflow=10,  # Maximum overflow connections beyond pool_size
-    poolclass=NullPool if "pytest" in os.getenv("_", "") else None,  # Disable pooling for tests
-)
+# Detect if running in pytest
+is_testing = "pytest" in os.getenv("_", "") or "PYTEST_CURRENT_TEST" in os.environ
+
+if is_testing:
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        poolclass=NullPool,  # Disable pooling for tests
+    )
+else:
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,  # Set to True for SQL query logging
+        pool_pre_ping=True,  # Enable connection health checks
+        pool_size=5,  # Maximum number of connections in pool
+        max_overflow=10,  # Maximum overflow connections beyond pool_size
+    )
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(

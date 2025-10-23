@@ -12,7 +12,10 @@ class Settings:
 
     def __init__(self) -> None:
         self.SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-in-production")
-        self.ACCESS_TOKEN_EXPIRE_HOURS: int = self._get_int_env("ACCESS_TOKEN_EXPIRE_HOURS", 24)
+        self._validate_secret_key()
+        self.ACCESS_TOKEN_EXPIRE_HOURS: int = self._get_int_env(
+            "ACCESS_TOKEN_EXPIRE_HOURS", 24
+        )
         self.CORS_ORIGINS: str = os.getenv(
             "CORS_ORIGINS", "http://localhost:5173,http://localhost:3000"
         )
@@ -32,7 +35,19 @@ class Settings:
     @property
     def cors_origin_list(self) -> List[str]:
         """Parse the comma-separated CORS origins into a sanitized list."""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+        return [
+            origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
+        ]
+
+    def _validate_secret_key(self) -> None:
+        """Ensure SECRET_KEY meets security requirements."""
+        if self.SECRET_KEY == "change-me-in-production":
+            raise RuntimeError(
+                "SECRET_KEY environment variable must be set to a secure random value "
+                "before starting the server."
+            )
+        if len(self.SECRET_KEY) < 32:
+            raise RuntimeError("SECRET_KEY must be at least 32 characters long.")
 
 
 @lru_cache(maxsize=1)

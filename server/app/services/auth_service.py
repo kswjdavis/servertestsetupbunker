@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Tuple
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import revoke_token
 from app.models.user import User
+from app.repositories.revoked_token_repository import RevokedTokenRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import UserCreate
 
@@ -23,6 +23,7 @@ class AuthService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.user_repo = UserRepository(session)
+        self.revoked_token_repo = RevokedTokenRepository(session)
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -36,15 +37,16 @@ class AuthService:
 
     def create_access_token(
         self, user_id: UUID, expires_delta: timedelta | None = None
-    ) -> Tuple[str, datetime]:
+    ) -> Tuple[str, datetime, str]:
         """Create a signed JWT access token."""
         if expires_delta is None:
             expires_delta = timedelta(hours=settings.ACCESS_TOKEN_EXPIRE_HOURS)
 
         expire_at = datetime.now(timezone.utc) + expires_delta
-        payload = {"sub": str(user_id), "exp": expire_at}
+        jti = uuid4().hex
+        payload = {"sub": str(user_id), "exp": expire_at, "jti": jti}
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-        return token, expire_at
+        return token, expire_at, jti
 
     async def authenticate_user(self, username: str, password: str) -> User:
         """Authenticate a user by username and password."""
@@ -66,15 +68,21 @@ class AuthService:
             role=user_create.role,
         )
 
-    async def logout(self, token: str) -> None:
+    async def logout(self, token: str, user: User) -> None:
         """Revoke a token to invalidate future requests."""
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
         except ExpiredSignatureError:
             # Token already expired; nothing additional to revoke
             return
         except JWTError as exc:
             raise ValueError("Invalid token") from exc
+
+        jti = payload.get("jti")
+        if jti is None:
+            raise ValueError("Token missing identifier (jti)")
 
         expires_at_raw = payload.get("exp")
         if isinstance(expires_at_raw, (int, float)):
@@ -84,4 +92,5 @@ class AuthService:
         else:
             expires_at = datetime.now(timezone.utc)
 
-        revoke_token(token, expires_at)
+        await self.revoked_token_repo.purge_expired()
+        await self.revoked_token_repo.add(jti, user.id, expires_at)

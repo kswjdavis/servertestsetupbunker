@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.rate_limiter import check_rate_limit
 from app.core.security import get_access_token, get_current_user
 from app.models.user import User
 from app.schemas.auth import TokenResponse, UserCreate, UserLogin, UserResponse
@@ -37,6 +38,12 @@ async def register_user(
         ) from exc
 
 
+async def enforce_login_rate_limit(request: Request) -> None:
+    """Guard the login endpoint against brute force attacks."""
+    identifier = request.client.host if request.client else "unknown"
+    check_rate_limit(identifier)
+
+
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -45,18 +52,21 @@ async def register_user(
 async def login_user(
     credentials: UserLogin,
     session: AsyncSession = Depends(get_db),
+    _: None = Depends(enforce_login_rate_limit),
 ) -> TokenResponse:
     """Authenticate user credentials and return an access token."""
     auth_service = AuthService(session)
     try:
-        user = await auth_service.authenticate_user(credentials.username, credentials.password)
+        user = await auth_service.authenticate_user(
+            credentials.username, credentials.password
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         ) from exc
 
-    token, expires_at = auth_service.create_access_token(user.id)
+    token, expires_at, _ = auth_service.create_access_token(user.id)
     expires_in = max(
         0,
         int((expires_at - datetime.now(timezone.utc)).total_seconds()),
@@ -74,9 +84,14 @@ async def logout_user(
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     """Invalidate the current user's session by revoking the token."""
-    _ = current_user  # Ensures dependency executes for authentication
     auth_service = AuthService(session)
-    await auth_service.logout(token)
+    try:
+        await auth_service.logout(token, current_user)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -28,6 +28,7 @@ scripts/    # Helper scripts for local setup
    cp server/.env.example server/.env
    cp web/.env.local.example web/.env.local
    ```
+   Update the `SECRET_KEY` in `server/.env` to a secure random value (32+ chars), for example via `openssl rand -hex 32`.
 3. Run the helper script to install dependencies:
    ```bash
    ./scripts/setup-dev.sh
@@ -92,6 +93,7 @@ The repository also includes a Docker setup for running the FastAPI backend and 
    ```bash
    cp server/.env.docker.example server/.env.docker
    ```
+   Set a strong `SECRET_KEY` in `server/.env.docker` before starting the containers.
 2. Build and launch the stack:
    ```bash
    docker compose up --build
