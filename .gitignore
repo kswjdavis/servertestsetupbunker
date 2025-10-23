@@ -34,6 +34,16 @@ __pycache__/
 server/.env
 web/.env.local
 
+# SSH Keys (NEVER commit private keys!)
+SSH_Key/
+*.pem
+*.key
+id_rsa
+id_ed25519
+id_ecdsa
+deploy_key
+deploy_key.pub
+
 # ESP-IDF build outputs
 firmware/build/
 firmware/sdkconfig
@@ -45,3 +55,4 @@ firmware/sdkconfig.old
 # Keep BMAD core config, agents, tasks, templates tracked
 # !.bmad-core/
 # !.bmad-core/**/*
+*.backup/
