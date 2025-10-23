@@ -83,3 +83,26 @@ psql bunkercolab_dev
 4. Validate PostgreSQL connectivity (`psql bunkercolab_dev`).
 
 Document any platform-specific issues in the story debug log or new docs as they arise.
+
+## Docker Local Development (Backend + Database)
+
+The repository also includes a Docker setup for running the FastAPI backend and PostgreSQL together.
+
+1. Copy the Docker environment template:
+   ```bash
+   cp server/.env.docker.example server/.env.docker
+   ```
+2. Build and launch the stack:
+   ```bash
+   docker compose up --build
+   ```
+   This starts:
+   - `db`: PostgreSQL 15 with credentials `bunker / bunker`
+   - `backend`: FastAPI app running on `http://localhost:8000`
+3. On first start, Alembic migrations run automatically. Hot reload is enabled; code changes under `server/app` take effect without rebuilding.
+4. Stop services when finished:
+   ```bash
+   docker compose down
+   ```
+
+The `postgres_data` volume retains database state between runs. Remove it with `docker compose down -v` if you need a clean slate.

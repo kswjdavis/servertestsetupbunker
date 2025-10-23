@@ -4,78 +4,79 @@
 schema: 1
 story: "1.1"
 story_title: "Project Scaffolding and Monorepo Setup"
-gate: PASS
-status_reason: "All acceptance criteria met with high-quality implementation. Monorepo structure properly established with correct tooling for all three components. Minor refactoring performed to improve developer experience."
+gate: FAIL
+status_reason: "Firmware build still references missing provisioning/status/time_sync sources, and a Python virtualenv is committed under server/. Both issues block clean onboarding."
 reviewer: "Quinn (Test Architect)"
-updated: "2025-10-22T00:00:00Z"
+updated: "2025-10-23T18:25:30Z"
 
 waiver:
   active: false
 
-top_issues: []
+top_issues:
+  - id: firmware-missing-sources
+    severity: high
+    area: firmware
+    summary: "idf.py build fails because firmware/main/CMakeLists.txt lists provisioning/status/time_sync sources that are absent from firmware/main."
+    recommended_owner: dev
+    refs:
+      - firmware/main/CMakeLists.txt:6
+      - firmware/main.backup/provisioning.c:1
+  - id: committed-venv
+    severity: medium
+    area: server
+    summary: "server/venv is committed to VCS; .gitignore does not exclude nested virtualenvs, inflating repo size and risking stale dependencies."
+    recommended_owner: dev
+    refs:
+      - server/venv/pyvenv.cfg:1
+      - .gitignore:21
 
-# Evidence of comprehensive review
 evidence:
-  tests_reviewed: 0  # Scaffolding story - no tests required
-  risks_identified: 0  # No blocking risks for scaffolding
+  tests_reviewed: 0
+  risks_identified: 2
   trace:
-    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # All 10 ACs validated
-    ac_gaps: []  # No gaps in implementation
+    ac_covered: [1, 2, 3, 5, 6, 7, 9]
+    ac_gaps: [4, 8, 10]
 
-# NFR Validation
 nfr_validation:
   security:
     status: PASS
-    notes: "Environment templates properly configured with placeholder secrets. All sensitive files in .gitignore."
+    notes: "Environment templates keep secrets out of source control."
   performance:
     status: PASS
-    notes: "Setup script is efficient. No performance concerns for scaffolding."
+    notes: "Setup script remains lightweight; no runtime load yet."
   reliability:
-    status: PASS
-    notes: "PostgreSQL check added to setup script for better developer feedback."
+    status: FAIL
+    notes: "Firmware build cannot complete because required sources are missing from firmware/main."
   maintainability:
-    status: PASS
-    notes: "Clean code structure, comprehensive documentation, TypeScript strict mode enabled."
+    status: CONCERNS
+    notes: "Committed virtualenv indicates process gap and adds repo noise."
 
-# Quality score (100 - no concerns or failures)
-quality_score: 100
+quality_score: 70
 
-# Recommendations for future improvements
 recommendations:
-  immediate: []  # No blocking issues
+  immediate:
+    - action: "Restore or remove provisioning/status/time_sync sources from firmware/main so idf.py build succeeds."
+      refs: ["firmware/main/CMakeLists.txt:6"]
+    - action: "Delete server/venv from source control and update .gitignore to block nested virtualenvs."
+      refs: ["server/venv/pyvenv.cfg:1", ".gitignore:21"]
   future:
-    - action: "Add linting configuration (ESLint, Prettier, Black/Ruff) for code quality"
-      refs: ["web/", "server/"]
-    - action: "Consider pinning exact versions in requirements.txt to prevent breaking changes"
-      refs: ["server/requirements.txt"]
-    - action: "Add troubleshooting section to README for common platform-specific setup issues"
-      refs: ["README.md"]
+    - action: "Add CI smoke checks for scripts/setup-dev.sh and firmware build once sources are corrected."
+      refs: ["scripts/setup-dev.sh:32"]
 
-# Risk summary
 risk_summary:
   totals:
-    critical: 0
+    critical: 1
     high: 0
-    medium: 0
+    medium: 1
     low: 0
   recommendations:
-    must_fix: []
+    must_fix:
+      - "Fix firmware component source list so idf.py build passes."
     monitor:
-      - "Monitor dependency versions during development to avoid breaking changes"
+      - "Update ignore rules and tooling to prevent committing local environments."
 
-# Review notes
 review_notes: |
-  Comprehensive scaffolding implementation that properly establishes the monorepo foundation.
-
-  Strengths:
-  - Directory structure matches architecture specification exactly
-  - All required configuration files present and correct
-  - TypeScript strict mode enabled for type safety
-  - Comprehensive .gitignore and documentation
-  - Automated setup script for dependency installation
-
-  Refactoring performed:
-  - Added PostgreSQL version check to setup-dev.sh for better developer feedback
-
-  This scaffolding provides a solid foundation for the development team to begin parallel
-  work on firmware, backend, and frontend components in Epic 1.
+  Double-check confirmed scaffolding assets remain in place, but firmware build currently fails
+  because firmware/main lacks provisioning/status/time_sync sources while they remain referenced in
+  the component CMake file. A full server/venv virtualenv is tracked in git, showing the ignore rules
+  need tightening. Address both blockers before promoting Story 1.1.

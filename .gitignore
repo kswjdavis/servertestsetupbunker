@@ -18,7 +18,10 @@ dist/
 build/
 .vite/
 
-# Python virtual environments
+# Python virtual environments (catch at any depth)
+**/.venv/
+**/venv/
+**/env/
 .venv/
 venv/
 env/
@@ -32,6 +35,7 @@ __pycache__/
 .env
 .env.*
 server/.env
+server/.env.docker
 web/.env.local
 
 # SSH Keys (NEVER commit private keys!)
