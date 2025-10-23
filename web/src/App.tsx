@@ -1,14 +1,36 @@
-function App(): JSX.Element {
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import ProtectedRoute from './components/ProtectedRoute';
+import MainLayout from './components/Layout/MainLayout';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import Dashboard from './pages/Dashboard';
+import BunkerDetail from './pages/BunkerDetail';
+import DeviceList from './pages/DeviceList';
+import Settings from './pages/Settings';
+
+function App() {
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-      <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-8 shadow-xl">
-        <h1 className="text-3xl font-semibold">Bunkercolab</h1>
-        <p className="mt-2 text-slate-300">
-          React + Vite + Tailwind scaffold is ready. Start building the bunker control
-          dashboard here.
-        </p>
-      </div>
-    </div>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/bunkers/:id" element={<BunkerDetail />} />
+                <Route path="/devices" element={<DeviceList />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+            </Route>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
