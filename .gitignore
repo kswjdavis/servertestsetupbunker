@@ -1,8 +1,17 @@
-# BMAD (local only)
-.bmad-core/
+# BMAD Configuration (tracked in git for team consistency)
+# Only ignore runtime/temporary files, not configuration
+.bmad-core/.DS_Store
 .bmad-*/
-.claude/commands/BMad
-.claude/commands/BMad
-.claude/commands/BMad/tasks
+.claude/commands/BMad/.DS_Store
 web-bundles
 AGENTS.md
+.worktrees
+
+# AI Debug and Runtime Files (local only)
+.ai/debug-log.md
+.ai/*.log
+.ai/.DS_Store
+
+# Keep BMAD core config, agents, tasks, templates tracked
+# !.bmad-core/
+# !.bmad-core/**/*
