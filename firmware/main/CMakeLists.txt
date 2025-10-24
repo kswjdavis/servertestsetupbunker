@@ -15,9 +15,9 @@ idf_component_register(
         nvs_flash
         esp_http_server
         esp_http_client
-        esp_tls
+        esp-tls
         esp_timer
-        cjson
+        json
     EMBED_TXTFILES
         "certs/root_cert.pem"
 )

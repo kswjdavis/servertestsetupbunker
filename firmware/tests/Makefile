@@ -1,23 +1,34 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -std=c11 -I../main
-LDFLAGS =
+CFLAGS = -Wall -Wextra -Werror -std=c11 -I../main -pthread
+LDFLAGS = -pthread
 
-SRCS = test_http_client_utils.c ../main/http_client_utils.c
-OBJS = $(SRCS:.c=.o)
-TARGET = test_http_client_utils
+TARGETS = test_http_client_utils test_deadman_timer
 
 .PHONY: all clean run
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
+test_http_client_utils: test_http_client_utils.o http_client_utils_test_support.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-%.o: %.c
+test_http_client_utils.o: test_http_client_utils.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-run: $(TARGET)
-	./$(TARGET)
+http_client_utils_test_support.o: ../main/http_client_utils.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+test_deadman_timer: test_deadman_timer.o deadman_timer_test_support.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+test_deadman_timer.o: test_deadman_timer.c
+	$(CC) $(CFLAGS) -DUNIT_TEST -c $< -o $@
+
+deadman_timer_test_support.o: ../main/deadman_timer.c
+	$(CC) $(CFLAGS) -DUNIT_TEST -c $< -o $@
+
+run: $(TARGETS)
+	./test_http_client_utils
+	./test_deadman_timer
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(TARGETS) *.o deadman_timer_test_support.o http_client_utils_test_support.o

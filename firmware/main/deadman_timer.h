@@ -1,10 +1,9 @@
 /**
  * @file deadman_timer.h
- * @brief Stub interface for the dead-man countdown timer component.
+ * @brief Interface for the ESP32 dead-man countdown timer fail-safe component.
  *
- * Story 1.8 reads the remaining countdown value when reporting status
- * to the server. A full implementation arrives in Story 2.1; this stub
- * exposes the API surface so callers can be wired up now.
+ * Provides initialization, reset, inspection, and test-hook APIs for the
+ * countdown timer that protects bunker fans when communication is lost.
  */
 
 #ifndef DEADMAN_TIMER_H
@@ -31,6 +30,11 @@ uint32_t deadman_timer_get_remaining(void);
 
 /** Determine whether the countdown has expired. */
 bool deadman_timer_is_expired(void);
+
+#ifdef UNIT_TEST
+/** Advance the timer by one simulated second (exposed for unit tests). */
+void deadman_timer_test_tick(void);
+#endif
 
 #ifdef __cplusplus
 }

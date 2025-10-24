@@ -34,6 +34,7 @@
 #include "relay_controller.h"
 #include "deadman_timer.h"
 #include "esp_timer.h"
+#include "test_config.h"
 
 // Logging tag
 static const char *TAG = "main";
@@ -243,6 +244,62 @@ static void status_reporting_task(void *pvParameters)
 }
 
 /**
+ * @brief Auto-configure device for testing (TEST MODE ONLY)
+ */
+static void auto_configure_test_device(void)
+{
+#if ENABLE_TEST_MODE
+    ESP_LOGW(TAG, "========================================");
+    ESP_LOGW(TAG, "TEST MODE: Auto-configuring device");
+    ESP_LOGW(TAG, "========================================");
+
+    // Set WiFi credentials
+    esp_err_t ret = nvs_storage_set_wifi_credentials(TEST_WIFI_SSID, TEST_WIFI_PASSWORD);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "WiFi SSID set: %s", TEST_WIFI_SSID);
+    } else {
+        ESP_LOGE(TAG, "Failed to set WiFi credentials");
+        return;
+    }
+
+    // Set server URL
+    ret = nvs_storage_set_server_url(TEST_SERVER_URL);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Server URL set: %s", TEST_SERVER_URL);
+    } else {
+        ESP_LOGE(TAG, "Failed to set server URL");
+        return;
+    }
+
+    // Set auth token
+    ret = nvs_storage_set_auth_token(TEST_AUTH_TOKEN);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Auth token set: %.8s...", TEST_AUTH_TOKEN);
+    } else {
+        ESP_LOGE(TAG, "Failed to set auth token");
+        return;
+    }
+
+    // Mark as provisioned
+    ret = nvs_storage_set_provisioned(true);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Device marked as provisioned");
+    } else {
+        ESP_LOGE(TAG, "Failed to mark device as provisioned");
+        return;
+    }
+
+    ESP_LOGW(TAG, "========================================");
+    ESP_LOGW(TAG, "TEST MODE: Configuration complete");
+    ESP_LOGW(TAG, "Restarting in 3 seconds...");
+    ESP_LOGW(TAG, "========================================");
+
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    esp_restart();
+#endif
+}
+
+/**
  * @brief Initialize and start application
  */
 void app_main(void)
@@ -275,12 +332,18 @@ void app_main(void)
     ret = nvs_storage_is_provisioned(&provisioned);
 
     if (!provisioned) {
+#if ENABLE_TEST_MODE
+        ESP_LOGW(TAG, "Device not provisioned - entering TEST MODE auto-configuration");
+        auto_configure_test_device();
+        // Will restart after configuration
+#else
         ESP_LOGW(TAG, "Device not provisioned - would enter provisioning mode");
         ESP_LOGW(TAG, "Provisioning implementation is in Epic 1 - Provisioning Component");
         ESP_LOGW(TAG, "For now, please configure WiFi and token manually in NVS");
         app_state = APP_STATE_PROVISIONING;
         // TODO: Implement provisioning mode (separate component)
         return;
+#endif
     }
 
     ESP_LOGI(TAG, "Device is provisioned");
