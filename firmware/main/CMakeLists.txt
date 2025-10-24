@@ -3,9 +3,10 @@ idf_component_register(
         "main.c"
         "wifi_manager.c"
         "nvs_storage.c"
-        "provisioning.c"
-        "status_client.c"
-        "time_sync.c"
+        "http_client.c"
+        "http_client_utils.c"
+        "deadman_timer.c"
+        "relay_controller.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi

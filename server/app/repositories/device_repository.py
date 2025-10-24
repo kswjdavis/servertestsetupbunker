@@ -73,13 +73,35 @@ class DeviceRepository(BaseRepository[Device]):
         """
         Provision a new device for a bunker.
 
-        Raises appropriate HTTP exceptions for validation failures.
+        Args:
+            bunker_id: UUID of the bunker to assign device to
+            fan_position: Physical fan position (1-based)
+            mac_address: Device MAC address (will be normalized to uppercase)
+
+        Returns:
+            Newly provisioned Device with generated auth_token
+
+        Raises:
+            HTTPException: 404 if bunker not found, 409 for conflicts, 400 for validation errors
+
+        Security Note:
+            Auth tokens are stored in plaintext (not hashed) because devices need
+            to send the exact token for comparison. Tokens are UUID4 (cryptographically random).
         """
+        # Normalize MAC address to uppercase for consistent storage
+        mac_address = mac_address.upper()
+
         bunker = await self.session.get(Bunker, bunker_id)
         if bunker is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Bunker not found",
+            )
+
+        if fan_position > bunker.fan_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Fan position {fan_position} exceeds bunker fan count {bunker.fan_count}",
             )
 
         existing_device = await self.get_by_mac_address(mac_address)

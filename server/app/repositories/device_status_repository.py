@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import utc_now
 from app.models.device_status import DeviceStatus
 from app.repositories.base import BaseRepository
 
@@ -75,15 +76,20 @@ class DeviceStatusRepository(BaseRepository[DeviceStatus]):
                 "wifi_rssi": wifi_rssi,
                 "countdown_timer_remaining": countdown_timer_remaining,
                 "reported_at": reported_at,
-                "server_received_at": datetime.utcnow(),
+                "server_received_at": utc_now(),
             },
         )
 
         await self.session.execute(stmt)
         await self.session.commit()
 
-        # Fetch and return the updated/created record
-        return await self.get_by_device_id(device_id)
+        # Fetch and return the updated/created record with fresh state
+        result = await self.session.execute(
+            select(DeviceStatus)
+            .where(DeviceStatus.device_id == device_id)
+            .execution_options(populate_existing=True)
+        )
+        return result.scalar_one()
 
     async def get_status_for_bunker(self, bunker_id: UUID) -> list[DeviceStatus]:
         """

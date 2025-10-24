@@ -49,6 +49,23 @@ def upgrade() -> None:
     sa.CheckConstraint('id = 1', name='check_singleton'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.execute(
+        sa.text(
+            """
+            INSERT INTO global_config (
+                id,
+                default_wind_threshold_mph,
+                default_electricity_cost_kwh,
+                default_fan_power_watts,
+                weather_station_id,
+                weather_poll_interval_seconds,
+                shutdown_broadcast_interval_seconds,
+                device_offline_threshold_seconds
+            )
+            VALUES (1, 15.0, 0.12, 1500, 'KOKC', 60, 60, 120)
+            """
+        )
+    )
     op.create_table('users',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=False),

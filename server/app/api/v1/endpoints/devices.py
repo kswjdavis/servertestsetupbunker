@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.security import require_roles
+from app.models.user import User, UserRole
 from app.repositories.device_repository import DeviceRepository
 from app.schemas.device import (
     DeviceListResponse,
@@ -20,6 +20,7 @@ from app.schemas.device import (
 )
 
 router = APIRouter(prefix="/devices", tags=["devices"])
+AdminUser = Annotated[User, Depends(require_roles([UserRole.ADMIN.value]))]
 
 
 @router.post(
@@ -29,10 +30,18 @@ router = APIRouter(prefix="/devices", tags=["devices"])
 )
 async def provision_device(
     payload: DeviceProvisionRequest,
+    _: AdminUser,
     session: AsyncSession = Depends(get_db),
-    _: Annotated[User, Depends(get_current_user)],
 ) -> DeviceProvisionResponse:
-    """Provision a new ESP32 device and return the auth token exactly once."""
+    """
+    Provision a new ESP32 device and return the auth token exactly once.
+
+    **SECURITY WARNING**: The auth_token is returned only during provisioning.
+    Store it securely - it cannot be retrieved later. The token is required
+    for all device API requests.
+
+    **Authorization**: Requires admin role.
+    """
     repository = DeviceRepository(session)
     device = await repository.provision_device(
         bunker_id=payload.bunker_id,
@@ -53,8 +62,8 @@ async def provision_device(
     status_code=status.HTTP_200_OK,
 )
 async def list_devices(
+    _: AdminUser,
     session: AsyncSession = Depends(get_db),
-    _: Annotated[User, Depends(get_current_user)],
 ) -> DeviceListResponse:
     """List all provisioned devices (auth token excluded)."""
     repository = DeviceRepository(session)
@@ -71,8 +80,8 @@ async def list_devices(
 )
 async def get_device(
     device_id: UUID,
+    _: AdminUser,
     session: AsyncSession = Depends(get_db),
-    _: Annotated[User, Depends(get_current_user)],
 ) -> DeviceResponse:
     """Fetch a single device by its identifier."""
     repository = DeviceRepository(session)
@@ -91,9 +100,16 @@ async def get_device(
 )
 async def delete_device(
     device_id: UUID,
+    _: AdminUser,
     session: AsyncSession = Depends(get_db),
-    _: Annotated[User, Depends(get_current_user)],
 ) -> None:
-    """Deprovision a device from the system."""
+    """
+    Deprovision a device from the system.
+
+    **WARNING**: This permanently removes the device. The device will no longer
+    be able to authenticate with its auth_token.
+
+    **Authorization**: Requires admin role.
+    """
     repository = DeviceRepository(session)
     await repository.delete_device(device_id)

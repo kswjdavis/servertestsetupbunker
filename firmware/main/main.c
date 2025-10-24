@@ -31,6 +31,8 @@
 #include "nvs_storage.h"
 #include "wifi_manager.h"
 #include "http_client.h"
+#include "relay_controller.h"
+#include "deadman_timer.h"
 #include "esp_timer.h"
 
 // Logging tag
@@ -46,6 +48,10 @@ typedef enum {
 } app_state_t;
 
 static app_state_t app_state = APP_STATE_INIT;
+
+static bool s_authentication_failed = false;
+static bool s_initial_auth_complete = false;
+static char s_device_state[32] = "booting";
 
 // Status reporting interval (FR23: 60 seconds)
 #define STATUS_REPORT_INTERVAL_MS   60000
@@ -79,64 +85,161 @@ static void wifi_event_handler(wifi_state_t state, void *user_ctx)
 }
 
 /**
+ * @brief Trigger fail-safe mode when authentication cannot succeed.
+ */
+static void enter_auth_fail_safe(const char *reason, int status_code, const char *response_body)
+{
+    if (s_authentication_failed) {
+        ESP_LOGW(TAG, "Auth fail-safe already active; ignoring duplicate trigger");
+        return;
+    }
+
+    s_authentication_failed = true;
+    strncpy(s_device_state, "unprovisioned/auth_failed", sizeof(s_device_state) - 1);
+    s_device_state[sizeof(s_device_state) - 1] = '\0';
+
+    if (reason && strlen(reason) > 0) {
+        ESP_LOGE(TAG, "Authentication failure: %s", reason);
+    } else {
+        ESP_LOGE(TAG, "Authentication failure: unspecified reason");
+    }
+
+    if (status_code > 0) {
+        ESP_LOGE(TAG, "Server response status: %d", status_code);
+    }
+
+    if (response_body && strlen(response_body) > 0) {
+        ESP_LOGE(TAG, "Server response body: %s", response_body);
+    }
+
+    ESP_LOGE(TAG, "Entering fail-safe mode due to authentication failure");
+    relay_force_on();
+    http_client_clear_auth_token();
+    app_state = APP_STATE_ERROR;
+}
+
+/**
+ * @brief Perform an authenticated status report and process server response.
+ */
+static esp_err_t perform_status_report(bool initial_attempt)
+{
+    if (!http_client_has_auth_token()) {
+        enter_auth_fail_safe("Missing authentication token", 0, NULL);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    device_status_t status = {
+        .relay_state = relay_get_state(),
+        .uptime_seconds = (uint32_t)(esp_timer_get_time() / 1000000),
+        .wifi_rssi = (int32_t)wifi_manager_get_rssi(),
+        .countdown_timer_remaining = deadman_timer_get_remaining(),
+        .firmware_version = FIRMWARE_VERSION,
+    };
+
+    server_decision_t decision = {0};
+    esp_err_t err = http_client_report_status(&status, &decision);
+
+    if (err == ESP_OK) {
+        if (decision.status_code == HTTP_STATUS_OK) {
+            if (!s_initial_auth_complete && initial_attempt) {
+                s_initial_auth_complete = true;
+                strncpy(s_device_state, "authenticated", sizeof(s_device_state) - 1);
+                s_device_state[sizeof(s_device_state) - 1] = '\0';
+                ESP_LOGI(TAG, "Authentication successful (HTTP 200)");
+                ESP_LOGI(TAG, "Device successfully authenticated with server - proceeding to normal operation");
+            } else {
+                ESP_LOGI(TAG, "Status accepted by server (HTTP 200)");
+            }
+
+            if (decision.valid) {
+                const char *server_time = decision.server_time[0] ? decision.server_time : "<not provided>";
+                ESP_LOGI(
+                    TAG,
+                    "Server decision: shutdown_allowed=%s reset_countdown=%s server_time=%s",
+                    decision.shutdown_allowed ? "true" : "false",
+                    decision.reset_countdown ? "true" : "false",
+                    server_time
+                );
+
+                if (decision.reset_countdown) {
+                    ESP_LOGI(TAG, "Resetting dead-man timer per server directive");
+                    deadman_timer_reset();
+                }
+            } else {
+                ESP_LOGW(TAG, "Server response missing expected control fields");
+            }
+        } else if (decision.status_code == HTTP_STATUS_UNAUTHORIZED) {
+            ESP_LOGE(TAG, "Authentication failed - invalid or expired token (HTTP 401)");
+            enter_auth_fail_safe("Authentication failed - invalid or missing token", decision.status_code, NULL);
+            err = ESP_ERR_INVALID_RESPONSE;
+        } else {
+            ESP_LOGW(TAG, "Unexpected HTTP status: %d", decision.status_code);
+        }
+    } else {
+        ESP_LOGW(TAG, "Failed to report status: %s", esp_err_to_name(err));
+    }
+
+    ESP_LOGI(TAG, "Free heap: %u bytes", (unsigned)esp_get_free_heap_size());
+
+    if (s_authentication_failed) {
+        ESP_LOGW(TAG, "Status reporting halted - authentication failure latched");
+    }
+
+    return err;
+}
+
+/**
  * @brief Status reporting task (FR23)
  *
- * Reports device status to cloud server every 60 seconds.
+ * Reports device status to cloud server every 60 seconds and performs the
+ * initial authentication verification immediately after WiFi connection.
  */
 static void status_reporting_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Status reporting task started");
 
     TickType_t last_wake_time = xTaskGetTickCount();
+    bool initial_attempt_done = false;
 
     while (1) {
-        // Wait for next reporting interval
+        if (s_authentication_failed) {
+            ESP_LOGW(TAG, "Authentication failure latched; stopping status reporting task");
+            break;
+        }
+
+        if (!initial_attempt_done) {
+            ESP_LOGI(TAG, "Waiting for WiFi connection before initial authentication check...");
+
+            while (!wifi_manager_is_connected()) {
+                if (s_authentication_failed) {
+                    break;
+                }
+                vTaskDelay(pdMS_TO_TICKS(200));
+            }
+
+            if (s_authentication_failed) {
+                break;
+            }
+
+            ESP_LOGI(TAG, "Performing initial authentication check...");
+            perform_status_report(true);
+            initial_attempt_done = true;
+            last_wake_time = xTaskGetTickCount();
+            continue;
+        }
+
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(STATUS_REPORT_INTERVAL_MS));
 
-        // Only report if WiFi is connected
         if (!wifi_manager_is_connected()) {
             ESP_LOGW(TAG, "Skipping status report - WiFi not connected");
             continue;
         }
 
-        // Prepare status data
-        device_status_t status = {0};
-
-        // Get device ID from NVS
-        if (nvs_storage_get_device_id(status.device_id) != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to get device ID from NVS");
-            continue;
-        }
-
-        // Get WiFi RSSI
-        status.wifi_rssi = wifi_manager_get_rssi();
-
-        // Get system information
-        status.uptime_sec = esp_timer_get_time() / 1000000; // Convert microseconds to seconds
-        status.free_heap = esp_get_free_heap_size();
-        status.firmware_version = FIRMWARE_VERSION;
-        status.connected = true;
-
-        // Report status to server
-        http_response_t response = {0};
-        esp_err_t err = http_client_report_status(&status, &response);
-
-        if (err == ESP_OK) {
-            ESP_LOGI(TAG, "Status reported successfully (HTTP %d)", response.status_code);
-
-            if (response.status_code == HTTP_STATUS_UNAUTHORIZED) {
-                ESP_LOGE(TAG, "Authentication failed - token may be invalid");
-            }
-        } else {
-            ESP_LOGW(TAG, "Failed to report status: %s", esp_err_to_name(err));
-        }
-
-        // Cleanup response
-        http_client_free_response(&response);
-
-        // Log heap usage for monitoring
-        ESP_LOGI(TAG, "Free heap: %lu bytes", status.free_heap);
+        perform_status_report(false);
     }
+
+    ESP_LOGW(TAG, "Status reporting task terminated (device state: %s)", s_device_state);
+    vTaskDelete(NULL);
 }
 
 /**
@@ -146,6 +249,9 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Bunkercolab Firmware v%s starting...", FIRMWARE_VERSION);
     ESP_LOGI(TAG, "Epic 1: Foundation & Device Communication");
+
+    relay_controller_init();
+    deadman_timer_init();
 
     esp_err_t ret;
 
@@ -245,11 +351,18 @@ void app_main(void)
     // Load auth token from NVS
     char auth_token[128] = {0};
     ret = nvs_storage_get_auth_token(auth_token);
-    if (ret == ESP_OK) {
-        http_client_set_auth_token(auth_token);
-        ESP_LOGI(TAG, "Authentication token loaded (redacted)");
+    if (ret == ESP_OK && strlen(auth_token) > 0) {
+        if (http_client_set_auth_token(auth_token) == ESP_OK) {
+            ESP_LOGI(TAG, "Authentication token loaded from NVS (first 8 chars): %.8s...", auth_token);
+        } else {
+            ESP_LOGE(TAG, "Failed to configure authentication token");
+            enter_auth_fail_safe("Failed to configure authentication token", 0, NULL);
+            return;
+        }
     } else {
-        ESP_LOGW(TAG, "No auth token in NVS");
+        ESP_LOGE(TAG, "No auth token in NVS - device cannot authenticate");
+        enter_auth_fail_safe("Missing auth token in NVS", 0, NULL);
+        return;
     }
 
     ESP_LOGI(TAG, "HTTPS client initialized");

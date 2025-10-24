@@ -33,13 +33,18 @@ async def create_bunker(
     return bunker.id
 
 
-async def auth_headers(client: AsyncClient, username: str = "operator") -> dict[str, str]:
+async def auth_headers(
+    client: AsyncClient,
+    username: str = "admin_user",
+    *,
+    role: str = "admin",
+) -> dict[str, str]:
     """Register and authenticate a user, returning bearer headers."""
     register_payload = {
         "username": username,
         "password": "password123",
         "email": f"{username}@example.com",
-        "role": "operator",
+        "role": role,
     }
     register_response = await client.post("/api/v1/auth/register", json=register_payload)
     assert register_response.status_code == 201, register_response.text
@@ -83,12 +88,43 @@ async def test_provision_device_success(
 
 
 @pytest.mark.asyncio
+async def test_operator_role_cannot_manage_devices(
+    async_session: AsyncSession,
+    client: AsyncClient,
+) -> None:
+    """Operator role should be forbidden from device management endpoints."""
+    bunker_id = await create_bunker(async_session, name="Restricted Field")
+    headers = await auth_headers(
+        client,
+        username="operator_forbidden",
+        role="operator",
+    )
+
+    payload = {
+        "bunker_id": str(bunker_id),
+        "fan_position": 1,
+        "mac_address": "AA:BB:CC:DD:EE:FE",
+    }
+    provision_response = await client.post(
+        "/api/v1/devices/provision",
+        json=payload,
+        headers=headers,
+    )
+    assert provision_response.status_code == 403
+    assert provision_response.json()["detail"] == "Insufficient permissions"
+
+    list_response = await client.get("/api/v1/devices", headers=headers)
+    assert list_response.status_code == 403
+    assert list_response.json()["detail"] == "Insufficient permissions"
+
+
+@pytest.mark.asyncio
 async def test_duplicate_mac_address_conflict(
     async_session: AsyncSession,
     client: AsyncClient,
 ) -> None:
     """Provisioning with duplicate MAC address returns HTTP 409."""
-    headers = await auth_headers(client, username="operator_mac")
+    headers = await auth_headers(client, username="admin_mac")
     bunker_id = await create_bunker(async_session, name="South Field")
 
     payload = {
@@ -114,7 +150,7 @@ async def test_duplicate_fan_position_conflict(
     client: AsyncClient,
 ) -> None:
     """Provisioning with duplicate fan position returns HTTP 409."""
-    headers = await auth_headers(client, username="operator_fan")
+    headers = await auth_headers(client, username="admin_fan")
     bunker_id = await create_bunker(async_session, name="East Field")
 
     first_payload = {
@@ -145,7 +181,7 @@ async def test_invalid_bunker_returns_not_found(
     client: AsyncClient,
 ) -> None:
     """Provisioning with unknown bunker triggers 404."""
-    headers = await auth_headers(client, username="operator_invalid")
+    headers = await auth_headers(client, username="admin_invalid")
     payload = {
         "bunker_id": str(uuid4()),
         "fan_position": 1,
@@ -166,7 +202,7 @@ async def test_led_flash_sequence_auto_increments(
     client: AsyncClient,
 ) -> None:
     """LED flash sequence increments per bunker and caps at 10."""
-    headers = await auth_headers(client, username="operator_led")
+    headers = await auth_headers(client, username="admin_led")
     bunker_id = await create_bunker(async_session, name="West Field")
 
     first_payload = {
@@ -197,7 +233,7 @@ async def test_led_flash_sequence_limit_enforced(
     client: AsyncClient,
 ) -> None:
     """Provisioning more than 10 devices in a bunker returns HTTP 400."""
-    headers = await auth_headers(client, username="operator_limit")
+    headers = await auth_headers(client, username="admin_limit")
     bunker_id = await create_bunker(async_session, name="Limit Field", fan_count=12)
 
     for idx in range(1, 11):
@@ -234,7 +270,7 @@ async def test_list_devices_excludes_auth_token(
     client: AsyncClient,
 ) -> None:
     """GET /devices returns device details without auth token."""
-    headers = await auth_headers(client, username="operator_list")
+    headers = await auth_headers(client, username="admin_list")
     bunker_id = await create_bunker(async_session, name="Listing Field")
 
     payload = {
@@ -265,7 +301,7 @@ async def test_get_device_returns_details(
     client: AsyncClient,
 ) -> None:
     """GET /devices/{id} returns device metadata without auth token."""
-    headers = await auth_headers(client, username="operator_get")
+    headers = await auth_headers(client, username="admin_get")
     bunker_id = await create_bunker(async_session, name="Detail Field")
 
     payload = {
@@ -296,7 +332,7 @@ async def test_delete_device_deprovisions(
     client: AsyncClient,
 ) -> None:
     """DELETE /devices/{id} removes the device."""
-    headers = await auth_headers(client, username="operator_delete")
+    headers = await auth_headers(client, username="admin_delete")
     bunker_id = await create_bunker(async_session, name="Delete Field")
 
     payload = {
