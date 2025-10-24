@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import BunkerDetail from './pages/BunkerDetail';
 import DeviceList from './pages/DeviceList';
 import Settings from './pages/Settings';
+import ProvisioningPage from './pages/ProvisioningPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/bunkers/:id" element={<BunkerDetail />} />
                 <Route path="/devices" element={<DeviceList />} />
+                <Route path="/devices/provision" element={<ProvisioningPage />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
