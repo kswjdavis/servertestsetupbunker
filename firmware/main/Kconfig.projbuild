@@ -1,0 +1,10 @@
+menu "Relay Configuration"
+
+config RELAY_GPIO_PIN
+    int "Relay GPIO Pin"
+    default 2
+    help
+        GPIO pin connected to the normally-closed relay controlling bunker fans.
+
+endmenu
+

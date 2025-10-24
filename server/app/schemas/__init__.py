@@ -1,12 +1,14 @@
 """Pydantic schema definitions for API contracts."""
 
 from .auth import TokenResponse, UserCreate, UserLogin, UserResponse
+from .control import ShutdownDecision
 from .device import (
     DeviceListResponse,
     DeviceProvisionRequest,
     DeviceProvisionResponse,
     DeviceResponse,
 )
+from .weather import WeatherData
 
 __all__ = [
     "TokenResponse",
@@ -17,4 +19,6 @@ __all__ = [
     "DeviceProvisionResponse",
     "DeviceResponse",
     "DeviceListResponse",
+    "ShutdownDecision",
+    "WeatherData",
 ]

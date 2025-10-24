@@ -83,7 +83,9 @@ async def test_valid_token_returns_200_ok(
     body = response.json()
     assert "shutdown_allowed" in body
     assert "reset_countdown" in body
+    assert "reason" in body
     assert "server_time" in body
+    assert body["reason"] == "default_safe"
 
 
 @pytest.mark.asyncio

@@ -7,6 +7,7 @@ idf_component_register(
         "http_client_utils.c"
         "deadman_timer.c"
         "relay_controller.c"
+        "watchdog_manager.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi
@@ -18,6 +19,8 @@ idf_component_register(
         esp-tls
         esp_timer
         json
+    PRIV_REQUIRES
+        esp_driver_gpio
     EMBED_TXTFILES
         "certs/root_cert.pem"
 )

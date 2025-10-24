@@ -11,6 +11,7 @@ from app.models import utc_now
 from app.models.device import Device
 from app.repositories.device_status_repository import DeviceStatusRepository
 from app.schemas.device import DeviceStatusRequest, DeviceStatusResponse
+from app.services.control_logic_engine import control_logic_engine
 
 router = APIRouter(prefix="/control", tags=["control"])
 
@@ -30,8 +31,7 @@ async def report_device_status(
 
     The device authenticates using its provisioned bearer token. Upon receipt we
     update the device heartbeat, upsert its latest telemetry snapshot, and reply
-    with shutdown guidance. Control logic integration will arrive in later
-    stories; for now the decision defaults to keeping fans running.
+    with shutdown guidance determined by the control logic engine.
     """
     received_at = utc_now()
     device.last_seen = received_at
@@ -48,9 +48,14 @@ async def report_device_status(
         reported_at=received_at,
     )
 
-    # Placeholder logic until Story 2.5 implements the control logic engine.
+    decision = await control_logic_engine.should_shutdown_fans(
+        device_id=device.id,
+        session=session,
+    )
+
     return DeviceStatusResponse(
-        shutdown_allowed=False,
-        reset_countdown=False,
+        shutdown_allowed=decision.shutdown_allowed,
+        reset_countdown=decision.reset_countdown,
+        reason=decision.reason,
         server_time=received_at,
     )

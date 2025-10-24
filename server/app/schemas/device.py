@@ -96,4 +96,5 @@ class DeviceStatusResponse(BaseModel):
 
     shutdown_allowed: bool = Field(description="True when the device should shutdown fan operations")
     reset_countdown: bool = Field(description="Signals whether the local countdown timer should reset")
+    reason: str = Field(description="Machine-readable explanation of the shutdown decision")
     server_time: datetime = Field(description="Current server time in ISO 8601 format (UTC)")

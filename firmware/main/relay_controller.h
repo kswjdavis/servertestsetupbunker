@@ -1,12 +1,11 @@
 /**
  * @file relay_controller.h
- * @brief Minimal relay controller interface for fail-safe operations.
+ * @brief GPIO-backed relay controller with fail-safe locking semantics.
  *
- * Story 1.7 depends on the ability to force the relay ON when
- * authentication fails. A full relay controller implementation will
- * arrive in later stories; this header exposes the minimal APIs needed
- * today so other modules can invoke the fail-safe path without
- * worrying about hardware details yet.
+ * Controls a normally-closed relay that keeps bunker ventilation fans
+ * running in the event of hardware or software failures. The component
+ * exposes explicit ON/OFF helpers, a force-on fail-safe latch, and state
+ * inspection APIs used by status reporting and safety subsystems.
  */
 
 #ifndef RELAY_CONTROLLER_H
@@ -25,10 +24,17 @@ extern "C" {
  */
 void relay_controller_init(void);
 
+/** Drive the relay to the ON state (GPIO LOW, fans running). */
+void relay_set_on(void);
+
+/** Drive the relay to the OFF state (GPIO HIGH, fans stopped). */
+void relay_set_off(void);
+
 /**
  * @brief Force relay into ON state and latch fail-safe lock.
  *
- * Subsequent attempts to toggle the relay off should respect the lock.
+ * Subsequent attempts to toggle the relay off will be ignored until the
+ * device reboots, guaranteeing fail-safe behaviour.
  */
 void relay_force_on(void);
 
@@ -46,9 +52,17 @@ bool relay_is_locked(void);
  */
 const char *relay_get_state(void);
 
+#ifdef UNIT_TEST
+/**
+ * @brief Expose raw GPIO level for host-based unit tests.
+ *
+ * @return 0 when fans are ON (relay closed), 1 when fans are OFF.
+ */
+int relay_test_get_gpio_level(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif // RELAY_CONTROLLER_H
-

@@ -33,6 +33,7 @@
 #include "http_client.h"
 #include "relay_controller.h"
 #include "deadman_timer.h"
+#include "watchdog_manager.h"
 #include "esp_timer.h"
 #include "test_config.h"
 
@@ -59,6 +60,22 @@ static char s_device_state[32] = "booting";
 
 // Firmware version
 #define FIRMWARE_VERSION "1.0.0-epic1"
+
+static void watchdog_delay_with_feed(TickType_t total_delay_ticks)
+{
+    if (total_delay_ticks == 0) {
+        return;
+    }
+
+    const TickType_t feed_interval_ticks = pdMS_TO_TICKS(WATCHDOG_FEED_INTERVAL_MS);
+
+    while (total_delay_ticks > 0) {
+        TickType_t slice = (total_delay_ticks > feed_interval_ticks) ? feed_interval_ticks : total_delay_ticks;
+        vTaskDelay(slice);
+        watchdog_manager_feed();
+        total_delay_ticks -= slice;
+    }
+}
 
 /**
  * @brief WiFi event callback
@@ -116,7 +133,43 @@ static void enter_auth_fail_safe(const char *reason, int status_code, const char
     ESP_LOGE(TAG, "Entering fail-safe mode due to authentication failure");
     relay_force_on();
     http_client_clear_auth_token();
-    app_state = APP_STATE_ERROR;
+   app_state = APP_STATE_ERROR;
+}
+
+static void control_loop_task(void *pvParameters)
+{
+    (void)pvParameters;
+
+    ESP_LOGI(TAG, "Control loop task started");
+
+    if (watchdog_manager_subscribe_current_task("control_loop") == ESP_OK) {
+        watchdog_manager_feed();
+    }
+
+    bool last_deadman_expired = deadman_timer_is_expired();
+    bool last_relay_locked = relay_is_locked();
+
+    while (1) {
+        bool deadman_expired = deadman_timer_is_expired();
+        bool relay_locked = relay_is_locked();
+
+        if (deadman_expired && !last_deadman_expired) {
+            ESP_LOGW(TAG, "Dead-man timer reports expiration; fail-safe should be active");
+        } else if (!deadman_expired && last_deadman_expired) {
+            ESP_LOGI(TAG, "Dead-man timer reset; monitoring normal operation");
+        }
+
+        if (relay_locked && !last_relay_locked) {
+            ESP_LOGW(TAG, "Relay locked in ON state (fail-safe) - watchdog will continue monitoring");
+        } else if (!relay_locked && last_relay_locked) {
+            ESP_LOGI(TAG, "Relay fail-safe state cleared");
+        }
+
+        last_deadman_expired = deadman_expired;
+        last_relay_locked = relay_locked;
+
+        watchdog_delay_with_feed(pdMS_TO_TICKS(5000));
+    }
 }
 
 /**
@@ -124,6 +177,8 @@ static void enter_auth_fail_safe(const char *reason, int status_code, const char
  */
 static esp_err_t perform_status_report(bool initial_attempt)
 {
+    watchdog_manager_feed();
+
     if (!http_client_has_auth_token()) {
         enter_auth_fail_safe("Missing authentication token", 0, NULL);
         return ESP_ERR_INVALID_STATE;
@@ -186,6 +241,8 @@ static esp_err_t perform_status_report(bool initial_attempt)
         ESP_LOGW(TAG, "Status reporting halted - authentication failure latched");
     }
 
+    watchdog_manager_feed();
+
     return err;
 }
 
@@ -199,7 +256,12 @@ static void status_reporting_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Status reporting task started");
 
-    TickType_t last_wake_time = xTaskGetTickCount();
+    if (watchdog_manager_subscribe_current_task("status_report") == ESP_OK) {
+        watchdog_manager_feed();
+    }
+
+    const TickType_t report_interval_ticks = pdMS_TO_TICKS(STATUS_REPORT_INTERVAL_MS);
+    const TickType_t wifi_wait_delay_ticks = pdMS_TO_TICKS(200);
     bool initial_attempt_done = false;
 
     while (1) {
@@ -215,7 +277,7 @@ static void status_reporting_task(void *pvParameters)
                 if (s_authentication_failed) {
                     break;
                 }
-                vTaskDelay(pdMS_TO_TICKS(200));
+                watchdog_delay_with_feed(wifi_wait_delay_ticks);
             }
 
             if (s_authentication_failed) {
@@ -223,19 +285,21 @@ static void status_reporting_task(void *pvParameters)
             }
 
             ESP_LOGI(TAG, "Performing initial authentication check...");
+            watchdog_manager_feed();
             perform_status_report(true);
             initial_attempt_done = true;
-            last_wake_time = xTaskGetTickCount();
             continue;
         }
 
-        vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(STATUS_REPORT_INTERVAL_MS));
+        watchdog_delay_with_feed(report_interval_ticks);
 
         if (!wifi_manager_is_connected()) {
             ESP_LOGW(TAG, "Skipping status report - WiFi not connected");
+            watchdog_manager_feed();
             continue;
         }
 
+        watchdog_manager_feed();
         perform_status_report(false);
     }
 
@@ -307,8 +371,28 @@ void app_main(void)
     ESP_LOGI(TAG, "Bunkercolab Firmware v%s starting...", FIRMWARE_VERSION);
     ESP_LOGI(TAG, "Epic 1: Foundation & Device Communication");
 
+    watchdog_manager_init();
+
     relay_controller_init();
+    if (watchdog_manager_last_boot_was_watchdog()) {
+        ESP_LOGW(TAG, "Watchdog reboot detected - relay reinitialized to fail-safe ON state");
+    }
+
     deadman_timer_init();
+
+    BaseType_t control_loop_created = xTaskCreatePinnedToCore(
+        control_loop_task,
+        "control_loop",
+        4096,
+        NULL,
+        6,
+        NULL,
+        1
+    );
+
+    if (control_loop_created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create control loop task");
+    }
 
     esp_err_t ret;
 

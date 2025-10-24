@@ -1,6 +1,6 @@
 """GlobalConfig model for system-wide configuration (singleton)."""
 
-from sqlalchemy import CheckConstraint, Float, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import Base
@@ -37,6 +37,7 @@ class GlobalConfig(Base):
     device_offline_threshold_seconds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=120
     )
+    emergency_on_global: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     __table_args__ = (CheckConstraint("id = 1", name="check_singleton"),)
 
