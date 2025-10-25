@@ -100,6 +100,10 @@ class ControlLogicEngine:
             logger.warning("Weather data unavailable: %s", exc)
             return False
 
+        if weather_service.is_weather_stale():
+            logger.warning("Weather data stale; defaulting to fail-safe decision.")
+            return False
+
         speed = weather.wind_speed_mph
         if speed is None:
             return False

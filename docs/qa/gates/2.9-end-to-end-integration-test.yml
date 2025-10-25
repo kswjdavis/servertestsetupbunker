@@ -1,0 +1,173 @@
+story_id: "2.9"
+story_title: "End-to-End Integration Test"
+reviewed_by: "Quinn (Test Architect)"
+reviewed_at: "2025-10-24T00:00:00Z"
+decision: "CONCERNS"
+
+rationale: |
+  Integration test implementation is well-structured and provides good coverage of the happy path workflow
+  (authentication, provisioning, status reporting, control decisions, database persistence). However,
+  2 CRITICAL issues must be resolved before hardware handoff:
+
+  1. Test uses SQLite but production uses PostgreSQL - upsert syntax incompatibility risk
+  2. Weather staleness fail-safe path is untested - critical safety scenario
+
+  Additionally, 3 HIGH priority risks around timing, concurrency, and token lifecycle should be addressed
+  or documented as known limitations before hardware testing begins.
+
+  Code quality is good, test structure is solid, but critical test coverage gaps block hardware readiness.
+
+risk_summary:
+  totals:
+    critical: 2  # score 9
+    high: 3      # score 6
+    medium: 3    # score 4
+    low: 3       # score 2-3
+  highest:
+    id: TECH-001
+    score: 9
+    title: "SQLite vs PostgreSQL dialect differences in test database"
+  second_highest:
+    id: DATA-001
+    score: 9
+    title: "Weather service staleness scenarios not tested"
+  recommendations:
+    must_fix:
+      - "Add PostgreSQL integration test or validate SQLite upsert compatibility (TECH-001)"
+      - "Add weather staleness test scenario - verify fail-safe when weather unavailable (DATA-001)"
+      - "Document countdown timer behavior requirements for ESP32 developer (TECH-002)"
+    should_fix:
+      - "Add concurrent device test with 10+ simultaneous status updates (TECH-003)"
+      - "Document device token lifecycle and revocation procedure (SEC-001)"
+      - "Add 2-3 minute real-time test with actual delays, or document timing assumptions (TECH-002)"
+    monitor:
+      - "Real HTTPS connection behavior during hardware testing (TECH-004)"
+      - "Timezone consistency across DST transitions (DATA-002)"
+      - "Database query performance with multiple devices (PERF-001)"
+
+blockers:
+  - id: "TECH-001"
+    description: "Test uses sqlite+aiosqlite in-memory DB but production uses PostgreSQL. PostgreSQL-specific upsert syntax may fail differently."
+    severity: "critical"
+    location: "server/tests/conftest.py:26, server/app/repositories/device_status_repository.py:71"
+    resolution_required: "Add PostgreSQL test database or validate SQLite compatibility mode"
+
+  - id: "DATA-001"
+    description: "Weather staleness detection exists but fail-safe path untested. Real ESP32 will encounter stale weather."
+    severity: "critical"
+    location: "server/app/services/weather_service.py:138, server/app/services/control_logic_engine.py:98"
+    resolution_required: "Add test scenario where weather becomes stale, verify shutdown_allowed=False"
+
+concerns:
+  - id: "TECH-002"
+    description: "Test simulates 60 minutes in tight loop - doesn't validate real-time countdown timer behavior"
+    severity: "high"
+    impact: "Dead-man timer is safety-critical; timing bugs may only appear on hardware"
+    mitigation: "Document countdown timer requirements for ESP32 developer; plan hardware acceptance test"
+
+  - id: "TECH-003"
+    description: "Only single device tested - concurrent device handling not validated"
+    severity: "high"
+    impact: "Database race conditions or lock contention with multiple devices"
+    mitigation: "Add concurrent test with asyncio.gather OR document POC scale limitation (max 20 devices)"
+
+  - id: "SEC-001"
+    description: "Device tokens never expire and no revocation mechanism exists"
+    severity: "high"
+    impact: "Compromised or decommissioned device token remains valid indefinitely"
+    mitigation: "Document token lifecycle; provide admin procedure for device deletion; plan rotation for production"
+
+test_coverage:
+  requirements_traced: true
+  edge_cases_covered: false
+  error_paths_covered: true
+  performance_validated: false
+  security_validated: partial
+  notes: |
+    Good coverage of happy path integration flow. Database error fail-safe tested in separate
+    test_fail_safe_behaviour.py. Missing coverage for weather staleness, concurrent devices,
+    and real-time timing validation.
+
+code_quality:
+  readability: "excellent"
+  maintainability: "excellent"
+  test_structure: "excellent"
+  documentation: "good"
+  notes: |
+    Clean test implementation with good fixture design. Type hints used throughout.
+    Comprehensive assertions validate each response. Could benefit from more inline
+    comments explaining timing assumptions.
+
+hardware_readiness:
+  ready_for_hardware: false
+  prerequisites:
+    - "Fix TECH-001: Validate PostgreSQL compatibility"
+    - "Fix DATA-001: Test weather staleness scenario"
+    - "Document countdown timer behavior for ESP32 developer"
+  handoff_documentation:
+    - "docs/qa/assessments/2.9-end-to-end-integration-test-risk-20251024.md"
+    - "Create docs/ESP32_INTEGRATION_REQUIREMENTS.md (timing, fail-safe expectations)"
+    - "Update server/README.md with Python 3.10+ requirement"
+  hardware_acceptance_criteria:
+    - "Run system for minimum 1 hour continuously with real ESP32"
+    - "Test with real weather API (not stubbed)"
+    - "Validate fail-safe with network disconnect"
+    - "Verify countdown timer accuracy with stopwatch (300s ± 5s)"
+    - "Test emergency mode forces fans ON immediately"
+
+recommendations:
+  before_hardware_handoff:
+    - action: "Add PostgreSQL integration test"
+      priority: "critical"
+      effort: "medium"
+      description: "Use testcontainers-postgres or docker-compose test DB to validate upsert behavior"
+
+    - action: "Add weather staleness test"
+      priority: "critical"
+      effort: "low"
+      description: "Set last_successful_fetch to old time, verify fail-safe activates"
+
+    - action: "Document ESP32 integration requirements"
+      priority: "high"
+      effort: "low"
+      description: "Create sequence diagram and timing requirements for firmware developer"
+
+    - action: "Add concurrent device test"
+      priority: "medium"
+      effort: "medium"
+      description: "Test 10+ devices with asyncio.gather to validate no deadlocks"
+
+    - action: "Document Python 3.10+ requirement"
+      priority: "low"
+      effort: "trivial"
+      description: "Add to server/README.md and requirements.txt comments"
+
+  for_production:
+    - "Implement device token rotation mechanism"
+    - "Add semantic version validation for firmware_version field"
+    - "Monitor database query performance with >20 devices"
+    - "Add alerting for weather service staleness events"
+    - "Consider read replicas if device count exceeds 50"
+
+next_steps:
+  - "Developer: Fix 2 critical blockers (TECH-001, DATA-001)"
+  - "Developer: Document countdown timer requirements"
+  - "Developer: Re-run all tests including new PostgreSQL and staleness tests"
+  - "QA: Re-review after critical fixes implemented"
+  - "Team: Create hardware acceptance test plan based on risk profile"
+  - "Hardware Dev: Review docs/qa/assessments/2.9-*-risk-*.md before testing"
+
+additional_notes: |
+  This is an excellent example of comprehensive integration testing for a complex IoT system.
+  The test structure is clean, fixtures are well-designed, and the happy path is thoroughly
+  validated. The critical issues identified are not code quality problems, but rather test
+  environment differences (SQLite vs PostgreSQL) and missing edge case coverage (weather
+  staleness) that are essential for safety-critical hardware deployment.
+
+  The developer who wrote this has strong skills and attention to detail. With the 2 critical
+  fixes and documentation improvements, this will be production-ready for POC deployment.
+
+  Estimated effort to resolve blockers: 4-6 hours
+  - PostgreSQL test setup: 2-3 hours
+  - Weather staleness test: 1 hour
+  - Documentation: 1-2 hours

@@ -11,7 +11,7 @@
  * 3. If not provisioned: Enter provisioning mode (AP mode)
  * 4. If provisioned: Connect to WiFi
  * 5. Initialize HTTPS client
- * 6. Start status reporting task (60s interval)
+ * 6. Start control loop task (coordinates status reporting + server decisions)
  *
  * @author Bunkercolab Team
  * @date 2025
@@ -31,10 +31,12 @@
 #include "nvs_storage.h"
 #include "wifi_manager.h"
 #include "http_client.h"
+#include "auth_fail_safe.h"
 #include "relay_controller.h"
 #include "deadman_timer.h"
 #include "watchdog_manager.h"
 #include "esp_timer.h"
+#include "control_loop_logic.h"
 #include "test_config.h"
 
 // Logging tag
@@ -51,7 +53,6 @@ typedef enum {
 
 static app_state_t app_state = APP_STATE_INIT;
 
-static bool s_authentication_failed = false;
 static bool s_initial_auth_complete = false;
 static char s_device_state[32] = "booting";
 
@@ -107,34 +108,18 @@ static void wifi_event_handler(wifi_state_t state, void *user_ctx)
  */
 static void enter_auth_fail_safe(const char *reason, int status_code, const char *response_body)
 {
-    if (s_authentication_failed) {
-        ESP_LOGW(TAG, "Auth fail-safe already active; ignoring duplicate trigger");
+    bool newly_triggered = auth_fail_safe_trigger(reason, status_code, response_body);
+    if (!newly_triggered) {
         return;
     }
 
-    s_authentication_failed = true;
     strncpy(s_device_state, "unprovisioned/auth_failed", sizeof(s_device_state) - 1);
     s_device_state[sizeof(s_device_state) - 1] = '\0';
-
-    if (reason && strlen(reason) > 0) {
-        ESP_LOGE(TAG, "Authentication failure: %s", reason);
-    } else {
-        ESP_LOGE(TAG, "Authentication failure: unspecified reason");
-    }
-
-    if (status_code > 0) {
-        ESP_LOGE(TAG, "Server response status: %d", status_code);
-    }
-
-    if (response_body && strlen(response_body) > 0) {
-        ESP_LOGE(TAG, "Server response body: %s", response_body);
-    }
-
-    ESP_LOGE(TAG, "Entering fail-safe mode due to authentication failure");
-    relay_force_on();
-    http_client_clear_auth_token();
-   app_state = APP_STATE_ERROR;
+    app_state = APP_STATE_ERROR;
 }
+
+// Forward declaration
+static esp_err_t perform_status_report(server_decision_t *decision_out, bool initial_attempt);
 
 static void control_loop_task(void *pvParameters)
 {
@@ -146,36 +131,130 @@ static void control_loop_task(void *pvParameters)
         watchdog_manager_feed();
     }
 
+    uint32_t last_report_tick = (uint32_t)xTaskGetTickCount();
+    const uint32_t report_interval_ticks = (uint32_t)pdMS_TO_TICKS(STATUS_REPORT_INTERVAL_MS);
+    bool initial_report_pending = true;
+    bool wifi_was_connected = false;
+    bool logged_auth_failure = false;
+    bool last_decision_valid = false;
+    bool last_shutdown_allowed = false;
     bool last_deadman_expired = deadman_timer_is_expired();
     bool last_relay_locked = relay_is_locked();
 
     while (1) {
+        if (auth_fail_safe_is_active()) {
+            if (!logged_auth_failure) {
+                ESP_LOGW(TAG, "Authentication failed - control loop entering permanent fail-safe monitoring");
+                logged_auth_failure = true;
+            }
+
+            if (!relay_is_locked()) {
+                ESP_LOGW(TAG, "Ensuring relay is forced ON after authentication failure");
+                relay_force_on();
+            }
+
+            watchdog_delay_with_feed(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
+        bool wifi_connected = wifi_manager_is_connected();
+        if (wifi_connected && !wifi_was_connected) {
+            ESP_LOGI(TAG, "WiFi connection restored - resuming control loop coordination");
+        } else if (!wifi_connected && wifi_was_connected) {
+            ESP_LOGW(TAG, "WiFi connection lost - awaiting reconnection while dead-man timer counts down");
+        }
+        wifi_was_connected = wifi_connected;
+
+        if (wifi_connected) {
+            uint32_t now_ticks = (uint32_t)xTaskGetTickCount();
+            bool should_report = control_loop_should_attempt_report(
+                wifi_connected,
+                auth_fail_safe_is_active(),
+                now_ticks,
+                last_report_tick,
+                initial_report_pending,
+                report_interval_ticks
+            );
+
+            if (should_report) {
+                server_decision_t raw_decision = {0};
+                esp_err_t err = perform_status_report(&raw_decision, initial_report_pending);
+
+                initial_report_pending = false;
+                last_report_tick = now_ticks;
+
+                control_loop_decision_t logic_decision = {
+                    .shutdown_allowed = raw_decision.shutdown_allowed,
+                    .reset_countdown = raw_decision.reset_countdown,
+                    .valid = raw_decision.valid,
+                };
+
+                bool relay_locked_now = relay_is_locked();
+                control_loop_actions_t actions = control_loop_process_decision(
+                    err,
+                    &logic_decision,
+                    relay_locked_now,
+                    last_decision_valid,
+                    last_shutdown_allowed
+                );
+
+                if (actions.reset_deadman) {
+                    ESP_LOGI(TAG, "Resetting dead-man timer per server directive");
+                    deadman_timer_reset();
+                }
+
+                if (raw_decision.valid && raw_decision.shutdown_allowed && relay_locked_now) {
+                    ESP_LOGW(TAG, "Server allowed shutdown but relay locked in fail-safe state");
+                }
+
+                if (actions.relay_off) {
+                    relay_set_off();
+                }
+
+                if (actions.relay_on) {
+                    if (err != ESP_OK) {
+                        ESP_LOGW(TAG, "Failing closed: keeping relay ON while awaiting next successful report");
+                    }
+                    relay_set_on();
+                }
+
+                if (actions.decision_valid && actions.decision_changed) {
+                    ESP_LOGI(
+                        TAG,
+                        "Control decision applied: shutdown_allowed=%s",
+                        actions.shutdown_allowed ? "true" : "false"
+                    );
+                }
+
+                last_decision_valid = actions.decision_valid;
+                last_shutdown_allowed = actions.shutdown_allowed;
+            }
+        }
+
+        watchdog_delay_with_feed(pdMS_TO_TICKS(1000));
+
         bool deadman_expired = deadman_timer_is_expired();
-        bool relay_locked = relay_is_locked();
-
         if (deadman_expired && !last_deadman_expired) {
-            ESP_LOGW(TAG, "Dead-man timer reports expiration; fail-safe should be active");
+            ESP_LOGW(TAG, "Dead-man timer expired; relay should now be locked in fail-safe ON state");
         } else if (!deadman_expired && last_deadman_expired) {
-            ESP_LOGI(TAG, "Dead-man timer reset; monitoring normal operation");
+            ESP_LOGI(TAG, "Dead-man timer reset; normal watchdog cadence restored");
         }
-
-        if (relay_locked && !last_relay_locked) {
-            ESP_LOGW(TAG, "Relay locked in ON state (fail-safe) - watchdog will continue monitoring");
-        } else if (!relay_locked && last_relay_locked) {
-            ESP_LOGI(TAG, "Relay fail-safe state cleared");
-        }
-
         last_deadman_expired = deadman_expired;
-        last_relay_locked = relay_locked;
 
-        watchdog_delay_with_feed(pdMS_TO_TICKS(5000));
+        bool relay_locked = relay_is_locked();
+        if (relay_locked && !last_relay_locked) {
+            ESP_LOGW(TAG, "Relay transitioned to fail-safe locked ON state");
+        } else if (!relay_locked && last_relay_locked) {
+            ESP_LOGI(TAG, "Relay fail-safe lock cleared; normal control restored");
+        }
+        last_relay_locked = relay_locked;
     }
 }
 
 /**
  * @brief Perform an authenticated status report and process server response.
  */
-static esp_err_t perform_status_report(bool initial_attempt)
+static esp_err_t perform_status_report(server_decision_t *decision_out, bool initial_attempt)
 {
     watchdog_manager_feed();
 
@@ -192,11 +271,13 @@ static esp_err_t perform_status_report(bool initial_attempt)
         .firmware_version = FIRMWARE_VERSION,
     };
 
-    server_decision_t decision = {0};
-    esp_err_t err = http_client_report_status(&status, &decision);
+    server_decision_t local_decision = {0};
+    server_decision_t *decision_target = decision_out ? decision_out : &local_decision;
+
+    esp_err_t err = http_client_report_status(&status, decision_target);
 
     if (err == ESP_OK) {
-        if (decision.status_code == HTTP_STATUS_OK) {
+        if (decision_target->status_code == HTTP_STATUS_OK) {
             if (!s_initial_auth_complete && initial_attempt) {
                 s_initial_auth_complete = true;
                 strncpy(s_device_state, "authenticated", sizeof(s_device_state) - 1);
@@ -207,29 +288,24 @@ static esp_err_t perform_status_report(bool initial_attempt)
                 ESP_LOGI(TAG, "Status accepted by server (HTTP 200)");
             }
 
-            if (decision.valid) {
-                const char *server_time = decision.server_time[0] ? decision.server_time : "<not provided>";
+            if (decision_target->valid) {
+                const char *server_time = decision_target->server_time[0] ? decision_target->server_time : "<not provided>";
                 ESP_LOGI(
                     TAG,
                     "Server decision: shutdown_allowed=%s reset_countdown=%s server_time=%s",
-                    decision.shutdown_allowed ? "true" : "false",
-                    decision.reset_countdown ? "true" : "false",
+                    decision_target->shutdown_allowed ? "true" : "false",
+                    decision_target->reset_countdown ? "true" : "false",
                     server_time
                 );
-
-                if (decision.reset_countdown) {
-                    ESP_LOGI(TAG, "Resetting dead-man timer per server directive");
-                    deadman_timer_reset();
-                }
             } else {
                 ESP_LOGW(TAG, "Server response missing expected control fields");
             }
-        } else if (decision.status_code == HTTP_STATUS_UNAUTHORIZED) {
+        } else if (decision_target->status_code == HTTP_STATUS_UNAUTHORIZED) {
             ESP_LOGE(TAG, "Authentication failed - invalid or expired token (HTTP 401)");
-            enter_auth_fail_safe("Authentication failed - invalid or missing token", decision.status_code, NULL);
+            enter_auth_fail_safe("Authentication failed - invalid or missing token", decision_target->status_code, NULL);
             err = ESP_ERR_INVALID_RESPONSE;
         } else {
-            ESP_LOGW(TAG, "Unexpected HTTP status: %d", decision.status_code);
+            ESP_LOGW(TAG, "Unexpected HTTP status: %d", decision_target->status_code);
         }
     } else {
         ESP_LOGW(TAG, "Failed to report status: %s", esp_err_to_name(err));
@@ -237,74 +313,13 @@ static esp_err_t perform_status_report(bool initial_attempt)
 
     ESP_LOGI(TAG, "Free heap: %u bytes", (unsigned)esp_get_free_heap_size());
 
-    if (s_authentication_failed) {
+    if (auth_fail_safe_is_active()) {
         ESP_LOGW(TAG, "Status reporting halted - authentication failure latched");
     }
 
     watchdog_manager_feed();
 
     return err;
-}
-
-/**
- * @brief Status reporting task (FR23)
- *
- * Reports device status to cloud server every 60 seconds and performs the
- * initial authentication verification immediately after WiFi connection.
- */
-static void status_reporting_task(void *pvParameters)
-{
-    ESP_LOGI(TAG, "Status reporting task started");
-
-    if (watchdog_manager_subscribe_current_task("status_report") == ESP_OK) {
-        watchdog_manager_feed();
-    }
-
-    const TickType_t report_interval_ticks = pdMS_TO_TICKS(STATUS_REPORT_INTERVAL_MS);
-    const TickType_t wifi_wait_delay_ticks = pdMS_TO_TICKS(200);
-    bool initial_attempt_done = false;
-
-    while (1) {
-        if (s_authentication_failed) {
-            ESP_LOGW(TAG, "Authentication failure latched; stopping status reporting task");
-            break;
-        }
-
-        if (!initial_attempt_done) {
-            ESP_LOGI(TAG, "Waiting for WiFi connection before initial authentication check...");
-
-            while (!wifi_manager_is_connected()) {
-                if (s_authentication_failed) {
-                    break;
-                }
-                watchdog_delay_with_feed(wifi_wait_delay_ticks);
-            }
-
-            if (s_authentication_failed) {
-                break;
-            }
-
-            ESP_LOGI(TAG, "Performing initial authentication check...");
-            watchdog_manager_feed();
-            perform_status_report(true);
-            initial_attempt_done = true;
-            continue;
-        }
-
-        watchdog_delay_with_feed(report_interval_ticks);
-
-        if (!wifi_manager_is_connected()) {
-            ESP_LOGW(TAG, "Skipping status report - WiFi not connected");
-            watchdog_manager_feed();
-            continue;
-        }
-
-        watchdog_manager_feed();
-        perform_status_report(false);
-    }
-
-    ESP_LOGW(TAG, "Status reporting task terminated (device state: %s)", s_device_state);
-    vTaskDelete(NULL);
 }
 
 /**
@@ -371,28 +386,12 @@ void app_main(void)
     ESP_LOGI(TAG, "Bunkercolab Firmware v%s starting...", FIRMWARE_VERSION);
     ESP_LOGI(TAG, "Epic 1: Foundation & Device Communication");
 
-    watchdog_manager_init();
-
     relay_controller_init();
+    watchdog_manager_init();
     if (watchdog_manager_last_boot_was_watchdog()) {
         ESP_LOGW(TAG, "Watchdog reboot detected - relay reinitialized to fail-safe ON state");
     }
-
     deadman_timer_init();
-
-    BaseType_t control_loop_created = xTaskCreatePinnedToCore(
-        control_loop_task,
-        "control_loop",
-        4096,
-        NULL,
-        6,
-        NULL,
-        1
-    );
-
-    if (control_loop_created != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create control loop task");
-    }
 
     esp_err_t ret;
 
@@ -515,27 +514,27 @@ void app_main(void)
     ESP_LOGI(TAG, "HTTPS client initialized");
 
     // ========================================================================
-    // Stage 6: Start Status Reporting Task (FR23)
+    // Stage 6: Start Control Loop Task
     // ========================================================================
-    ESP_LOGI(TAG, "[6/6] Starting status reporting task...");
+    ESP_LOGI(TAG, "[6/6] Starting control loop task...");
 
-    BaseType_t task_ret = xTaskCreatePinnedToCore(
-        status_reporting_task,      // Task function
-        "status_report",             // Task name
-        4096,                        // Stack size (4KB)
-        NULL,                        // Parameters
-        5,                           // Priority
-        NULL,                        // Task handle
-        1                            // Core 1
+    BaseType_t control_loop_created = xTaskCreatePinnedToCore(
+        control_loop_task,
+        "control_loop",
+        4096,
+        NULL,
+        6,
+        NULL,
+        1
     );
 
-    if (task_ret != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create status reporting task");
+    if (control_loop_created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create control loop task");
         app_state = APP_STATE_ERROR;
         return;
     }
 
-    ESP_LOGI(TAG, "Status reporting task started");
+    ESP_LOGI(TAG, "Control loop task started");
     ESP_LOGI(TAG, "==============================================");
     ESP_LOGI(TAG, "Bunkercolab firmware initialization complete");
     ESP_LOGI(TAG, "==============================================");

@@ -14,7 +14,7 @@
 
 #if defined(ESP_PLATFORM)
 #include "driver/gpio.h"
-#include "esp_err.h"
+#include "esp_err_compat.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
 #else

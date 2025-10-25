@@ -1,6 +1,12 @@
 """Pydantic schema definitions for API contracts."""
 
 from .auth import TokenResponse, UserCreate, UserLogin, UserResponse
+from .bunker import (
+    BunkerCreate,
+    BunkerListResponse,
+    BunkerResponse,
+    BunkerUpdate,
+)
 from .control import ShutdownDecision
 from .device import (
     DeviceListResponse,
@@ -15,6 +21,10 @@ __all__ = [
     "UserCreate",
     "UserLogin",
     "UserResponse",
+    "BunkerCreate",
+    "BunkerUpdate",
+    "BunkerResponse",
+    "BunkerListResponse",
     "DeviceProvisionRequest",
     "DeviceProvisionResponse",
     "DeviceResponse",

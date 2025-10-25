@@ -224,6 +224,26 @@ async def test_returns_default_safe_when_wind_speed_is_none(
 
 
 @pytest.mark.asyncio()
+async def test_returns_default_safe_when_weather_stale(
+    async_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stale weather data forces fail-safe behaviour."""
+    _, bunker, device = await _create_bunker_device_and_config(async_session, wind_threshold=10.0)
+
+    weather = _weather_payload(20.0)
+    monkeypatch.setattr(weather_service, "get_current_weather", lambda: weather)
+    monkeypatch.setattr(weather_service, "is_weather_stale", lambda: True)
+
+    engine = ControlLogicEngine()
+    decision = await engine.should_shutdown_fans(device.id, async_session)
+
+    assert decision.shutdown_allowed is False
+    assert decision.reset_countdown is False
+    assert decision.reason == "default_safe"
+
+
+@pytest.mark.asyncio()
 async def test_allows_shutdown_at_exact_threshold(
     async_session: AsyncSession,
     monkeypatch: pytest.MonkeyPatch,

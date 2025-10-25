@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "esp_err.h"
+#include "esp_err_compat.h"
 
 #define WATCHDOG_TIMEOUT_SECONDS 60
 #define WATCHDOG_FEED_INTERVAL_MS 30000

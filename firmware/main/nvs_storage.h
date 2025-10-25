@@ -11,7 +11,7 @@
 #ifndef NVS_STORAGE_H
 #define NVS_STORAGE_H
 
-#include "esp_err.h"
+#include "esp_err_compat.h"
 #include <stdint.h>
 #include <stdbool.h>
 

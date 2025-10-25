@@ -61,3 +61,14 @@ class Bunker(Base):
 
     def __repr__(self) -> str:
         return f"<Bunker(id={self.id}, name={self.name}, fan_count={self.fan_count})>"
+
+    @property
+    def device_count(self) -> int:
+        """
+        Convenience property used by API serializers.
+
+        Returns:
+            Number of devices associated with this bunker.
+        """
+        devices = getattr(self, "devices", None)
+        return len(devices) if devices is not None else 0
