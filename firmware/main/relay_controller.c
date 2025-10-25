@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 /* Lightweight logging shims for host-based unit tests. */
+#define ESP_LOGD(tag, fmt, ...) ((void)fprintf(stdout, "D (%s) " fmt "\n", tag, ##__VA_ARGS__))
 #define ESP_LOGI(tag, fmt, ...) ((void)fprintf(stdout, "I (%s) " fmt "\n", tag, ##__VA_ARGS__))
 #define ESP_LOGW(tag, fmt, ...) ((void)fprintf(stdout, "W (%s) " fmt "\n", tag, ##__VA_ARGS__))
 #define ESP_LOGE(tag, fmt, ...) ((void)fprintf(stdout, "E (%s) " fmt "\n", tag, ##__VA_ARGS__))
@@ -135,9 +136,21 @@ void relay_force_on(void)
 
     if (!already_locked) {
         ESP_LOGE(TAG, "RELAY LOCKED IN ON STATE - FAIL-SAFE ACTIVE");
-        ESP_LOGE(TAG, "Relay locked until device reboot");
+        ESP_LOGE(TAG, "Relay locked until device reboot or server control restored");
     } else {
         ESP_LOGW(TAG, "Relay already locked in fail-safe mode");
+    }
+}
+
+void relay_unlock_on_server_control_restored(void)
+{
+    bool was_locked = atomic_exchange_explicit(&s_locked, false, memory_order_acq_rel);
+
+    if (was_locked) {
+        ESP_LOGI(TAG, "Relay unlocked - server control restored");
+        ESP_LOGI(TAG, "Normal operation resumed");
+    } else {
+        ESP_LOGD(TAG, "Relay unlock called but relay was not locked");
     }
 }
 

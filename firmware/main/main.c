@@ -201,6 +201,14 @@ static void control_loop_task(void *pvParameters)
                 if (actions.reset_deadman) {
                     ESP_LOGI(TAG, "Resetting dead-man timer per server directive");
                     deadman_timer_reset();
+
+                    // Unlock relay when server control is restored
+                    // This allows remote devices to recover from fail-safe without manual reboot
+                    if (relay_locked_now) {
+                        ESP_LOGI(TAG, "Server communication restored - unlocking relay");
+                        relay_unlock_on_server_control_restored();
+                        relay_locked_now = false;  // Update local state after unlock
+                    }
                 }
 
                 if (raw_decision.valid && raw_decision.shutdown_allowed && relay_locked_now) {

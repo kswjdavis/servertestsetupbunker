@@ -34,9 +34,25 @@ void relay_set_off(void);
  * @brief Force relay into ON state and latch fail-safe lock.
  *
  * Subsequent attempts to toggle the relay off will be ignored until the
- * device reboots, guaranteeing fail-safe behaviour.
+ * device reboots or relay_unlock_on_server_control_restored() is called.
  */
 void relay_force_on(void);
+
+/**
+ * @brief Unlock relay from fail-safe mode when server control is restored.
+ *
+ * This function should ONLY be called when BOTH conditions are met:
+ * 1. Server communication is successfully restored (HTTP 200 response)
+ * 2. Server sends reset_countdown=true (indicating it's back in control)
+ *
+ * This allows remote devices to recover from temporary fail-safe events
+ * without requiring manual reboot, while maintaining safety by requiring
+ * explicit server confirmation that control has been restored.
+ *
+ * Safety note: The unlock only occurs if the server explicitly signals
+ * it has resumed control via reset_countdown=true in the HTTP response.
+ */
+void relay_unlock_on_server_control_restored(void);
 
 /**
  * @brief Check whether the relay has been latched in fail-safe mode.

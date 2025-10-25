@@ -8,7 +8,7 @@ story_title: "ESP32 Dead-Man Timer Implementation"
 gate: PASS
 status_reason: "Exemplary implementation with comprehensive test coverage including concurrent thread-safety validation. All 10 ACs satisfied with professional-grade code quality."
 reviewer: "Quinn (Test Architect)"
-updated: "2025-10-24T00:00:00Z"
+updated: "2025-10-24T21:32:00Z"
 
 waiver: { active: false }
 
@@ -112,3 +112,29 @@ standards_checked:
   - "ESP-IDF Best Practices (docs/ESP32_ESP-IDF_Best_Practices_Research.md)"
   - "Project Structure (firmware/main, firmware/tests)"
   - "FreeRTOS patterns and conventions"
+
+# Hardware validation status
+hardware_validation:
+  status: "COMPLETE"
+  date: "2025-10-24"
+  result: "PASS with CRITICAL FINDING (finding is in Story 2.2, not 2.1)"
+  duration_seconds: 90
+  test_configuration: "30-second timer (accelerated testing)"
+  hardware: "ESP32-D0WD rev1.0, MAC: 84:0d:8e:e6:5b:38"
+  detailed_report: "docs/qa/hardware-validation-2.1-20251024.md"
+  phases_completed:
+    phase_1_basic_functionality: "PASS - 99.7% timing accuracy"
+    phase_2_failsafe_trigger: "PASS - Correct expiration and one-shot behavior"
+    phase_3_stress_reliability: "PASS - Memory stable, no crashes"
+    phase_4_thread_safety: "PASS - Concurrent access validated"
+  critical_finding:
+    scope: "Story 2.2 (Relay Controller) - NOT Story 2.1"
+    issue: "Relay permanently locked after fail-safe, defeats remote management"
+    severity: "CRITICAL for remote deployment"
+    impact: "Requires manual reboot after any fail-safe event"
+    root_cause: "firmware/main/relay_controller.c:131-142"
+    recommendation: "Add relay unlock on communication restore OR config flag for lock behavior"
+    story_2_1_impact: "NONE - Dead-man timer functions perfectly"
+    resolution_status: "RESOLVED - 2025-10-24"
+    resolution_details: "Added relay_unlock_on_server_control_restored() function, integrated with HTTP response handler"
+    validation: "Hardware tested - two complete lock/unlock cycles validated successfully"
