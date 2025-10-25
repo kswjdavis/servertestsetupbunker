@@ -48,13 +48,17 @@ class ControlLogicEngine:
         config = await self._get_global_config(session)
 
         if await self._check_emergency_mode(bunker, config):
-            decision = self._make_decision(False, False, "emergency_on")
+            # Emergency mode: fans forced ON, reset countdown (server is healthy)
+            decision = self._make_decision(False, True, "emergency_on")
         elif await self._check_time_overrides(bunker.id, session):
-            decision = self._make_decision(False, False, "time_window_override")
+            # Time override: fans forced ON, reset countdown (server is healthy)
+            decision = self._make_decision(False, True, "time_window_override")
         elif self._check_wind_conditions(bunker, config):
-            decision = self._make_decision(True, True, "wind_conditions_favorable")
+            # High wind (>= threshold) = DANGER = fans must stay ON
+            decision = self._make_decision(False, True, "wind_above_threshold")
         else:
-            decision = self._make_decision(False, False, "default_safe")
+            # Low wind (< threshold) = SAFE = fans can shutdown to save energy
+            decision = self._make_decision(True, True, "wind_below_threshold")
 
         logger.info(
             "Shutdown decision for device %s in bunker %s: allowed=%s reason=%s",
