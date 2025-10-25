@@ -8,7 +8,7 @@ export const mockBunkers = [
     name: 'Deerfield',
     latitude: 37.977869, // 37°58'40.33"N
     longitude: -101.137831, // 101° 8'16.19"W
-    orientation: 0,
+    orientation: 45,  // Facing NE
     fan_count: 6,
     wind_threshold: 12,  // mph
     is_active: true,
@@ -21,7 +21,7 @@ export const mockBunkers = [
     name: 'PlumCreek Syracuse',
     latitude: 37.980625, // 37°58'50.25"N
     longitude: -101.754306, // 101°45'15.35"W
-    orientation: 0,
+    orientation: 270,  // Facing West
     fan_count: 8,
     wind_threshold: 15,  // mph
     is_active: true,
@@ -66,6 +66,98 @@ export const mockWeatherStations = [
     measured_at: new Date().toISOString()
   }
 ];
+
+export const mockBunkerStatus = {
+  '1': { // Deerfield bunker
+    bunker: mockBunkers[0],
+    devices: [
+      {
+        device_id: 'dev-1',
+        fan_position: 1,
+        mac_address: 'AA:BB:CC:DD:EE:01',
+        relay_state: 'ON' as const,
+        is_online: true,
+        wifi_rssi: -65,
+        uptime_seconds: 86400,
+        countdown_timer_remaining: 0,
+        last_seen: new Date().toISOString()
+      },
+      {
+        device_id: 'dev-2',
+        fan_position: 2,
+        mac_address: 'AA:BB:CC:DD:EE:02',
+        relay_state: 'ON' as const,
+        is_online: true,
+        wifi_rssi: -70,
+        uptime_seconds: 86400,
+        countdown_timer_remaining: 0,
+        last_seen: new Date().toISOString()
+      },
+      {
+        device_id: 'dev-3',
+        fan_position: 3,
+        mac_address: 'AA:BB:CC:DD:EE:03',
+        relay_state: 'OFF' as const,
+        is_online: true,
+        wifi_rssi: -68,
+        uptime_seconds: 43200,
+        countdown_timer_remaining: 0,
+        last_seen: new Date().toISOString()
+      },
+      {
+        device_id: 'dev-4',
+        fan_position: 4,
+        mac_address: 'AA:BB:CC:DD:EE:04',
+        relay_state: 'OFF' as const,
+        is_online: false,
+        wifi_rssi: 0,
+        uptime_seconds: 0,
+        countdown_timer_remaining: 0,
+        last_seen: new Date(Date.now() - 300000).toISOString() // 5 minutes ago
+      },
+      {
+        device_id: 'dev-5',
+        fan_position: 5,
+        mac_address: 'AA:BB:CC:DD:EE:05',
+        relay_state: 'ON' as const,
+        is_online: true,
+        wifi_rssi: -72,
+        uptime_seconds: 3600,
+        countdown_timer_remaining: 0,
+        last_seen: new Date().toISOString()
+      },
+      {
+        device_id: 'dev-6',
+        fan_position: 6,
+        mac_address: 'AA:BB:CC:DD:EE:06',
+        relay_state: 'ON' as const,
+        is_online: true,
+        wifi_rssi: -60,
+        uptime_seconds: 7200,
+        countdown_timer_remaining: 0,
+        last_seen: new Date().toISOString()
+      }
+    ],
+    weather: mockWeatherData
+  },
+  '2': { // PlumCreek Syracuse bunker
+    bunker: mockBunkers[1],
+    devices: Array.from({ length: 8 }, (_, i) => ({
+      device_id: `dev-pc-${i + 1}`,
+      fan_position: i + 1,
+      mac_address: `BB:CC:DD:EE:FF:0${i + 1}`,
+      relay_state: i % 3 === 0 ? 'OFF' as const : 'ON' as const,
+      is_online: i !== 3, // Fan 4 is offline
+      wifi_rssi: i === 3 ? 0 : -60 - i * 2,
+      uptime_seconds: 86400 - i * 3600,
+      countdown_timer_remaining: 0,
+      last_seen: i === 3
+        ? new Date(Date.now() - 180000).toISOString()
+        : new Date().toISOString()
+    })),
+    weather: mockWeatherData
+  }
+};
 
 export const mockDevices = [
   {
@@ -141,3 +233,49 @@ export const mockDevices = [
     is_online: true
   }
 ];
+
+export const mockEnergySavings = {
+  '1': { // Deerfield bunker
+    bunker_id: '1',
+    bunker_name: 'Deerfield',
+    total_kwh_saved: 1234.5,
+    total_cost_saved: 148.14,  // $0.12 per kWh
+    total_off_time_seconds: 8883000,  // ~102 days, 19 hours
+    calculation_period: {
+      start: '2024-01-15T10:00:00Z',
+      end: new Date().toISOString()
+    },
+    trend: {
+      percentage_change: 12.5,
+      direction: 'up' as const
+    }
+  },
+  '2': { // PlumCreek Syracuse bunker
+    bunker_id: '2',
+    bunker_name: 'PlumCreek Syracuse',
+    total_kwh_saved: 2156.8,
+    total_cost_saved: 258.82,  // $0.12 per kWh
+    total_off_time_seconds: 15528960,  // ~179 days, 17 hours
+    calculation_period: {
+      start: '2024-01-15T10:00:00Z',
+      end: new Date().toISOString()
+    },
+    trend: {
+      percentage_change: 8.2,
+      direction: 'up' as const
+    }
+  }
+};
+
+export const mockSystemWideSavings = {
+  total_kwh_saved: 3391.3,  // Sum of both bunkers
+  total_cost_saved: 406.96,  // Sum of both bunkers
+  total_off_time_seconds: 24411960,  // Combined off time
+  bunker_count: 2,
+  device_count: 14,  // 6 + 8 fans
+  by_bunker: Object.values(mockEnergySavings),
+  trend: {
+    percentage_change: 10.3,
+    direction: 'up' as const
+  }
+};

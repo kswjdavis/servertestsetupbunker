@@ -5,10 +5,13 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import api from '../services/api';
 import WindScorecard from '../components/weather/WindScorecard';
+import SystemWideSavingsDisplay from '../components/dashboard/SystemWideSavings';
 import UpdateIndicator from '../components/common/UpdateIndicator';
 import { usePoll } from '../hooks/usePoll';
 import { usePageVisibility } from '../hooks/usePageVisibility';
+import { useEnergySavings } from '../hooks/useEnergySavings';
 import type { Bunker, WeatherData } from '../types/api';
+import type { SystemWideSavings } from '../services/energy.service';
 import { mockBunkers, mockWeatherData, mockWeatherStations } from '../services/mockData';
 
 // Fix for default markers in react-leaflet
@@ -100,6 +103,9 @@ export default function MapDashboard() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isVisible = usePageVisibility();
+
+  // Poll system-wide energy savings every 10 seconds
+  const { data: systemSavings } = useEnergySavings(undefined, 10000);
 
   const fetchData = useCallback(async () => {
     try {
@@ -200,8 +206,32 @@ export default function MapDashboard() {
   return (
     <div className="h-screen w-full flex flex-col">
       {updating && <UpdateIndicator />}
+
+      {/* System-Wide Energy Savings */}
+      {systemSavings && !('bunker_id' in systemSavings) && (
+        <div className="p-4">
+          <SystemWideSavingsDisplay savings={systemSavings as SystemWideSavings} />
+        </div>
+      )}
+
       <WindScorecard weatherData={weatherData} stationId="KGCK" />
-      <div className="flex-1">
+
+      <div className="flex-1 relative">
+        {/* Create Bunker Button - positioned in top right of map */}
+        <div className="absolute top-4 right-4 z-[1000]">
+          <button
+            onClick={() => navigate('/bunkers/new')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            aria-label="Create new bunker"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 4v16m8-8H4" />
+            </svg>
+            Create Bunker
+          </button>
+        </div>
+
         <MapContainer
           center={center}
           zoom={bunkers.length > 1 ? 10 : 13}
