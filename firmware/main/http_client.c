@@ -18,6 +18,7 @@
 #include <string.h>
 #include <time.h>
 #include "http_client_utils.h"
+#include "nvs_storage.h"
 
 static const char *TAG = "http_client";
 
@@ -272,19 +273,36 @@ esp_err_t http_client_provision_device(const char *device_id, char *token)
         return ret != ESP_OK ? ret : ESP_FAIL;
     }
 
-    // Parse response to extract token
+    // Parse response to extract auth token and LED flash sequence
     if (response.body) {
         cJSON *json = cJSON_Parse(response.body);
         if (json) {
-            cJSON *token_obj = cJSON_GetObjectItem(json, "token");
-            if (token_obj && cJSON_IsString(token_obj)) {
+            cJSON *token_obj = cJSON_GetObjectItemCaseSensitive(json, "auth_token");
+            if (!cJSON_IsString(token_obj)) {
+                token_obj = cJSON_GetObjectItemCaseSensitive(json, "token");
+            }
+
+            if (cJSON_IsString(token_obj)) {
                 strncpy(token, token_obj->valuestring, 127);
                 token[127] = '\0';
-                ESP_LOGI(TAG, "Device provisioned successfully");
+                ESP_LOGI(TAG, "Device provisioned successfully - auth token received");
                 ret = ESP_OK;
             } else {
-                ESP_LOGE(TAG, "Token not found in response");
+                ESP_LOGE(TAG, "Auth token not found in provisioning response");
                 ret = ESP_FAIL;
+            }
+
+            cJSON *sequence_obj = cJSON_GetObjectItemCaseSensitive(json, "led_flash_sequence");
+            if (cJSON_IsNumber(sequence_obj)) {
+                int sequence = sequence_obj->valueint;
+                esp_err_t seq_ret = nvs_storage_set_led_flash_sequence((uint8_t)sequence);
+                if (seq_ret == ESP_OK) {
+                    ESP_LOGI(TAG, "LED flash sequence stored from provisioning response: %d", sequence);
+                } else {
+                    ESP_LOGE(TAG, "Failed to persist LED flash sequence: %s", esp_err_to_name(seq_ret));
+                }
+            } else {
+                ESP_LOGW(TAG, "LED flash sequence missing from provisioning response");
             }
             cJSON_Delete(json);
         } else {

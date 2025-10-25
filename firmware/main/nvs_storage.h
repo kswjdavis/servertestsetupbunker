@@ -31,6 +31,7 @@ extern "C" {
 #define NVS_KEY_DEVICE_ID      "device_id"
 #define NVS_KEY_PROVISIONED    "provisioned"
 #define NVS_KEY_SERVER_URL     "server_url"
+#define NVS_KEY_LED_SEQUENCE   "led_flash_seq"
 
 // Maximum string lengths
 #define NVS_MAX_SSID_LEN       32
@@ -114,6 +115,22 @@ esp_err_t nvs_storage_set_server_url(const char *url);
  * @return ESP_OK on success, ESP_ERR_NVS_NOT_FOUND if not stored
  */
 esp_err_t nvs_storage_get_server_url(char *url);
+
+/**
+ * @brief Store LED flash sequence identifier.
+ *
+ * @param sequence Blink count (1-10)
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t nvs_storage_set_led_flash_sequence(uint8_t sequence);
+
+/**
+ * @brief Retrieve LED flash sequence identifier.
+ *
+ * @param sequence Pointer to store sequence value
+ * @return ESP_OK on success, ESP_ERR_NVS_NOT_FOUND if not stored
+ */
+esp_err_t nvs_storage_get_led_flash_sequence(uint8_t *sequence);
 
 /**
  * @brief Mark device as provisioned

@@ -7,6 +7,7 @@ idf_component_register(
         "http_client_utils.c"
         "deadman_timer.c"
         "relay_controller.c"
+        "led_controller.c"
         "auth_fail_safe.c"
         "watchdog_manager.c"
         "control_loop_logic.c"

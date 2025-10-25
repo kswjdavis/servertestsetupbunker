@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -std=c11 -I../main -pthread
 LDFLAGS = -pthread
 
-TARGETS = test_http_client_utils test_deadman_timer test_relay_controller test_control_loop_logic test_auth_fail_safe
+TARGETS = test_http_client_utils test_deadman_timer test_relay_controller test_control_loop_logic test_auth_fail_safe test_led_controller
 
 .PHONY: all clean run
 
@@ -44,6 +44,15 @@ test_auth_fail_safe.o: test_auth_fail_safe.c
 auth_fail_safe_test_support.o: ../main/auth_fail_safe.c
 	$(CC) $(CFLAGS) -DUNIT_TEST -c $< -o $@
 
+test_led_controller: test_led_controller.o led_controller_test_support.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+test_led_controller.o: test_led_controller.c
+	$(CC) $(CFLAGS) -DUNIT_TEST -c $< -o $@
+
+led_controller_test_support.o: ../main/led_controller.c
+	$(CC) $(CFLAGS) -DUNIT_TEST -c $< -o $@
+
 test_control_loop_logic: test_control_loop_logic.o control_loop_logic.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
@@ -59,6 +68,7 @@ run: $(TARGETS)
 	./test_relay_controller
 	./test_control_loop_logic
 	./test_auth_fail_safe
+	./test_led_controller
 
 clean:
 	rm -f $(TARGETS) *.o \
@@ -66,4 +76,5 @@ clean:
 		http_client_utils_test_support.o \
 		relay_controller_test_support.o \
 		control_loop_logic.o \
-		auth_fail_safe_test_support.o
+		auth_fail_safe_test_support.o \
+		led_controller_test_support.o

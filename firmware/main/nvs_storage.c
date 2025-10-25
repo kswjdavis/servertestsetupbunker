@@ -417,6 +417,71 @@ esp_err_t nvs_storage_get_server_url(char *url)
     return ret;
 }
 
+esp_err_t nvs_storage_set_led_flash_sequence(uint8_t sequence)
+{
+    if (!nvs_initialized) {
+        ESP_LOGE(TAG, "NVS not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (sequence < 1 || sequence > 10) {
+        ESP_LOGE(TAG, "Invalid LED flash sequence: %u", (unsigned)sequence);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    nvs_handle_t nvs_handle;
+    esp_err_t ret = nvs_open(NVS_NAMESPACE_CONFIG, NVS_READWRITE, &nvs_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open NVS namespace: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    ret = nvs_set_u8(nvs_handle, NVS_KEY_LED_SEQUENCE, sequence);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set LED flash sequence: %s", esp_err_to_name(ret));
+        nvs_close(nvs_handle);
+        return ret;
+    }
+
+    ret = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "LED flash sequence stored: %u", (unsigned)sequence);
+    }
+
+    return ret;
+}
+
+esp_err_t nvs_storage_get_led_flash_sequence(uint8_t *sequence)
+{
+    if (!nvs_initialized) {
+        ESP_LOGE(TAG, "NVS not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (!sequence) {
+        ESP_LOGE(TAG, "Invalid parameter: sequence is NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    nvs_handle_t nvs_handle;
+    esp_err_t ret = nvs_open(NVS_NAMESPACE_CONFIG, NVS_READONLY, &nvs_handle);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    uint8_t value = 0;
+    ret = nvs_get_u8(nvs_handle, NVS_KEY_LED_SEQUENCE, &value);
+    nvs_close(nvs_handle);
+
+    if (ret == ESP_OK) {
+        *sequence = value;
+    }
+
+    return ret;
+}
+
 /**
  * @brief Mark device as provisioned
  */

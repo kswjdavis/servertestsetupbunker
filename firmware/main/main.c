@@ -37,7 +37,7 @@
 #include "watchdog_manager.h"
 #include "esp_timer.h"
 #include "control_loop_logic.h"
-#include "test_config.h"
+#include "led_controller.h"
 
 // Logging tag
 static const char *TAG = "main";
@@ -55,6 +55,8 @@ static app_state_t app_state = APP_STATE_INIT;
 
 static bool s_initial_auth_complete = false;
 static char s_device_state[32] = "booting";
+static uint8_t s_led_flash_sequence = 0;
+static bool s_led_task_started = false;
 
 // Status reporting interval (FR23: 60 seconds)
 #define STATUS_REPORT_INTERVAL_MS   60000
@@ -87,6 +89,21 @@ static void wifi_event_handler(wifi_state_t state, void *user_ctx)
         case WIFI_STATE_CONNECTED:
             ESP_LOGI(TAG, "WiFi connected successfully");
             app_state = APP_STATE_OPERATIONAL;
+
+            if (!s_led_task_started) {
+                if (s_led_flash_sequence >= 1 && s_led_flash_sequence <= 10) {
+                    esp_err_t led_err = led_flash_task_start(s_led_flash_sequence);
+                    if (led_err == ESP_OK) {
+                        s_led_task_started = true;
+                        ESP_LOGI(TAG, "LED identification sequence running (%u blinks)",
+                                 (unsigned)s_led_flash_sequence);
+                    } else {
+                        ESP_LOGE(TAG, "Failed to start LED flash task: %s", esp_err_to_name(led_err));
+                    }
+                } else {
+                    ESP_LOGW(TAG, "LED flash sequence not configured - skipping identification pattern");
+                }
+            }
             break;
 
         case WIFI_STATE_DISCONNECTED:
@@ -331,62 +348,6 @@ static esp_err_t perform_status_report(server_decision_t *decision_out, bool ini
 }
 
 /**
- * @brief Auto-configure device for testing (TEST MODE ONLY)
- */
-static void auto_configure_test_device(void)
-{
-#if ENABLE_TEST_MODE
-    ESP_LOGW(TAG, "========================================");
-    ESP_LOGW(TAG, "TEST MODE: Auto-configuring device");
-    ESP_LOGW(TAG, "========================================");
-
-    // Set WiFi credentials
-    esp_err_t ret = nvs_storage_set_wifi_credentials(TEST_WIFI_SSID, TEST_WIFI_PASSWORD);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "WiFi SSID set: %s", TEST_WIFI_SSID);
-    } else {
-        ESP_LOGE(TAG, "Failed to set WiFi credentials");
-        return;
-    }
-
-    // Set server URL
-    ret = nvs_storage_set_server_url(TEST_SERVER_URL);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Server URL set: %s", TEST_SERVER_URL);
-    } else {
-        ESP_LOGE(TAG, "Failed to set server URL");
-        return;
-    }
-
-    // Set auth token
-    ret = nvs_storage_set_auth_token(TEST_AUTH_TOKEN);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Auth token set: %.8s...", TEST_AUTH_TOKEN);
-    } else {
-        ESP_LOGE(TAG, "Failed to set auth token");
-        return;
-    }
-
-    // Mark as provisioned
-    ret = nvs_storage_set_provisioned(true);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Device marked as provisioned");
-    } else {
-        ESP_LOGE(TAG, "Failed to mark device as provisioned");
-        return;
-    }
-
-    ESP_LOGW(TAG, "========================================");
-    ESP_LOGW(TAG, "TEST MODE: Configuration complete");
-    ESP_LOGW(TAG, "Restarting in 3 seconds...");
-    ESP_LOGW(TAG, "========================================");
-
-    vTaskDelay(pdMS_TO_TICKS(3000));
-    esp_restart();
-#endif
-}
-
-/**
  * @brief Initialize and start application
  */
 void app_main(void)
@@ -400,6 +361,11 @@ void app_main(void)
         ESP_LOGW(TAG, "Watchdog reboot detected - relay reinitialized to fail-safe ON state");
     }
     deadman_timer_init();
+
+    esp_err_t led_init_err = led_controller_init();
+    if (led_init_err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize LED controller: %s", esp_err_to_name(led_init_err));
+    }
 
     esp_err_t ret;
 
@@ -423,21 +389,31 @@ void app_main(void)
     ret = nvs_storage_is_provisioned(&provisioned);
 
     if (!provisioned) {
-#if ENABLE_TEST_MODE
-        ESP_LOGW(TAG, "Device not provisioned - entering TEST MODE auto-configuration");
-        auto_configure_test_device();
-        // Will restart after configuration
-#else
-        ESP_LOGW(TAG, "Device not provisioned - would enter provisioning mode");
+        ESP_LOGW(TAG, "Device not provisioned - secure provisioning required before operation");
         ESP_LOGW(TAG, "Provisioning implementation is in Epic 1 - Provisioning Component");
-        ESP_LOGW(TAG, "For now, please configure WiFi and token manually in NVS");
+        ESP_LOGW(TAG, "Configure WiFi credentials, server URL, auth token, and LED sequence via approved provisioning workflow");
         app_state = APP_STATE_PROVISIONING;
         // TODO: Implement provisioning mode (separate component)
         return;
-#endif
     }
 
     ESP_LOGI(TAG, "Device is provisioned");
+
+    ret = nvs_storage_get_led_flash_sequence(&s_led_flash_sequence);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "LED flash sequence loaded from NVS: %u", (unsigned)s_led_flash_sequence);
+    } else if (ret == ESP_ERR_NVS_NOT_FOUND) {
+#ifdef CONFIG_LED_TEST_MODE
+        s_led_flash_sequence = CONFIG_LED_TEST_SEQUENCE;
+        ESP_LOGW(TAG, "LED flash sequence not found in NVS - using test mode sequence: %u", s_led_flash_sequence);
+#else
+        ESP_LOGW(TAG, "LED flash sequence not found in NVS - defaulting to disabled");
+        s_led_flash_sequence = 0;
+#endif
+    } else {
+        ESP_LOGE(TAG, "Failed to read LED flash sequence: %s", esp_err_to_name(ret));
+        s_led_flash_sequence = 0;
+    }
 
     // ========================================================================
     // Stage 3: Initialize Network Stack

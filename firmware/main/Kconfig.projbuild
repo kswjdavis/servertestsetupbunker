@@ -8,3 +8,28 @@ config RELAY_GPIO_PIN
 
 endmenu
 
+menu "LED Identification Configuration"
+
+config LED_GPIO_PIN
+    int "LED GPIO Pin"
+    default 2
+    help
+        GPIO pin connected to the status LED used for the identification pattern.
+
+config LED_TEST_MODE
+    bool "Enable LED Test Mode"
+    default y
+    help
+        Enable LED test mode to test flash patterns without full provisioning.
+        When enabled, LED_TEST_SEQUENCE will be used if NVS doesn't contain a sequence.
+
+config LED_TEST_SEQUENCE
+    int "LED Test Sequence (1-10)"
+    depends on LED_TEST_MODE
+    default 3
+    range 1 10
+    help
+        LED flash sequence to use in test mode (1-10 blinks).
+        This is only used when the device is not provisioned or NVS doesn't have a sequence.
+
+endmenu
