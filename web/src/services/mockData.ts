@@ -10,7 +10,7 @@ export const mockBunkers = [
     longitude: -101.137831, // 101° 8'16.19"W
     orientation: 0,
     fan_count: 6,
-    wind_threshold: 5.5,
+    wind_threshold: 12,  // mph
     is_active: true,
     status: 'online' as const,
     created_at: '2024-01-15T10:00:00Z',
@@ -23,7 +23,7 @@ export const mockBunkers = [
     longitude: -101.754306, // 101°45'15.35"W
     orientation: 0,
     fan_count: 8,
-    wind_threshold: 6.0,
+    wind_threshold: 15,  // mph
     is_active: true,
     status: 'energy_saving' as const,
     created_at: '2024-01-15T10:00:00Z',
@@ -33,12 +33,39 @@ export const mockBunkers = [
 
 export const mockWeatherData = {
   id: '1',
-  wind_speed: 7.5,
+  wind_speed: 16.8,  // mph (was 7.5 m/s)
   wind_direction: 225,
-  temperature: 22.5,
+  temperature: 72.5,  // Fahrenheit (was 22.5°C)
   humidity: 65,
   measured_at: new Date().toISOString()
 };
+
+export const mockWeatherStations = [
+  {
+    id: 'KGCK',
+    name: 'Garden City Regional Airport',
+    latitude: 37.9275,
+    longitude: -100.7244,
+    wind_speed: 16.8,  // mph
+    wind_direction: 225,
+    temperature: 72.5,  // Fahrenheit
+    humidity: 65,
+    barometer: 29.92,  // inHg
+    measured_at: new Date().toISOString()
+  },
+  {
+    id: 'KDDC',
+    name: 'Dodge City Regional Airport',
+    latitude: 37.7628,
+    longitude: -99.9656,
+    wind_speed: 14.2,  // mph
+    wind_direction: 240,
+    temperature: 74.0,  // Fahrenheit
+    humidity: 58,
+    barometer: 29.88,  // inHg
+    measured_at: new Date().toISOString()
+  }
+];
 
 export const mockDevices = [
   {

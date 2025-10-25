@@ -77,7 +77,7 @@ export default function TokenDisplayStep({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Device ID
         </label>
-        <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm">
+        <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm text-black">
           {deviceId}
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function TokenDisplayStep({
         </label>
         {showToken ? (
           <div className="relative">
-            <div className="px-3 py-2 pr-20 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm break-all">
+            <div className="px-3 py-2 pr-20 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm break-all text-black">
               {authToken}
             </div>
             <button

@@ -21,4 +21,10 @@
   .animate-fade-in {
     animation: fade-in 0.3s ease-out;
   }
+
+  /* Weather station tooltips always visible */
+  .leaflet-tooltip.weather-tooltip {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
 }

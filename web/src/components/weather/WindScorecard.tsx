@@ -3,9 +3,10 @@ import type { WeatherData } from '../../types/api';
 
 interface WindScorecardProps {
   weatherData: WeatherData | null;
+  stationId?: string;
 }
 
-export default function WindScorecard({ weatherData }: WindScorecardProps) {
+export default function WindScorecard({ weatherData, stationId = 'KGCK' }: WindScorecardProps) {
   if (!weatherData) {
     return (
       <div className="bg-white shadow-md border-b border-gray-200">
@@ -23,11 +24,11 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
     );
   }
 
-  const getWindStrength = (speed: number): { label: string; color: string } => {
-    if (speed < 2) return { label: 'Calm', color: 'text-gray-600' };
-    if (speed < 5) return { label: 'Light', color: 'text-blue-600' };
-    if (speed < 10) return { label: 'Moderate', color: 'text-green-600' };
-    if (speed < 15) return { label: 'Strong', color: 'text-orange-600' };
+  const getWindStrength = (speedMph: number): { label: string; color: string } => {
+    if (speedMph < 5) return { label: 'Calm', color: 'text-gray-600' };
+    if (speedMph < 12) return { label: 'Light', color: 'text-blue-600' };
+    if (speedMph < 20) return { label: 'Moderate', color: 'text-green-600' };
+    if (speedMph < 30) return { label: 'Strong', color: 'text-orange-600' };
     return { label: 'Very Strong', color: 'text-red-600' };
   };
 
@@ -44,12 +45,15 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
       <div className="container mx-auto px-4 py-2 md:py-3">
         {/* Desktop layout */}
         <div className="hidden md:flex items-center justify-between">
-          {/* Left side - Title */}
-          <div className="flex items-center space-x-2">
-            <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-            <span className="font-semibold text-gray-700">Current Wind Conditions</span>
+          {/* Left side - Station Name and Title */}
+          <div className="flex flex-col">
+            <div className="text-xs text-gray-500 font-medium mb-1">Station: {stationId}</div>
+            <div className="flex items-center space-x-2">
+              <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+              <span className="font-semibold text-gray-700">Current WX</span>
+            </div>
           </div>
 
           {/* Center - Wind Data */}
@@ -60,7 +64,7 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
                 <div className="text-2xl font-bold text-gray-900">
                   {weatherData.wind_speed.toFixed(1)}
                 </div>
-                <div className="text-xs text-gray-500">m/s</div>
+                <div className="text-xs text-gray-500">mph</div>
               </div>
               <div className={`font-medium ${windStrength.color}`}>
                 {windStrength.label}
@@ -98,7 +102,7 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
                 <div className="h-10 w-px bg-gray-300"></div>
                 <div className="text-center">
                   <div className="text-xl font-bold text-gray-900">
-                    {weatherData.temperature.toFixed(1)}°C
+                    {weatherData.temperature.toFixed(0)}°F
                   </div>
                   <div className="text-xs text-gray-500">Temperature</div>
                 </div>
@@ -128,7 +132,10 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
         {/* Mobile layout - Compact grid */}
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-gray-700">Wind Conditions</span>
+            <div>
+              <span className="text-xs text-gray-500 block">Station: {stationId}</span>
+              <span className="text-xs font-semibold text-gray-700">Current WX</span>
+            </div>
             <span className="text-xs text-gray-500">
               {new Date(weatherData.measured_at).toLocaleTimeString()}
             </span>
@@ -138,7 +145,7 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
             <div className="flex items-center space-x-2">
               <div className="text-lg font-bold text-gray-900">
                 {weatherData.wind_speed.toFixed(1)}
-                <span className="text-xs text-gray-500 ml-1">m/s</span>
+                <span className="text-xs text-gray-500 ml-1">mph</span>
               </div>
               <div className={`text-sm font-medium ${windStrength.color}`}>
                 {windStrength.label}
@@ -169,7 +176,7 @@ export default function WindScorecard({ weatherData }: WindScorecardProps) {
             {weatherData.temperature !== undefined && (
               <div className="text-sm">
                 <span className="font-bold text-gray-900">
-                  {weatherData.temperature.toFixed(1)}°C
+                  {weatherData.temperature.toFixed(0)}°F
                 </span>
                 <span className="text-xs text-gray-500 ml-1">Temp</span>
               </div>

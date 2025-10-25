@@ -30,7 +30,7 @@ export interface Bunker {
   longitude: number;
   orientation: number;
   fan_count: number;
-  wind_threshold: number;
+  wind_threshold: number; // mph
   is_active: boolean;
   status?: 'online' | 'offline' | 'energy_saving';
   emergency_on_bunker?: boolean;
@@ -40,9 +40,9 @@ export interface Bunker {
 
 export interface WeatherData {
   id: string;
-  wind_speed: number;
+  wind_speed: number; // mph
   wind_direction: number;
-  temperature?: number;
+  temperature?: number; // Fahrenheit
   humidity?: number;
   measured_at: string;
 }
