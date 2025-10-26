@@ -112,9 +112,7 @@ export default function EmergencyToggle({
     }
   };
 
-  const labelText = scope === 'global'
-    ? 'Emergency On - All Bunkers'
-    : 'Emergency On';
+  const labelText = 'Emergency On';
 
   return (
     <>
@@ -131,7 +129,7 @@ export default function EmergencyToggle({
             w-14 h-7 rounded-full peer transition-colors duration-300
             ${isChecked
               ? 'bg-red-600'
-              : 'bg-gray-300'
+              : 'bg-red-300/50'
             }
             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed
           `}>

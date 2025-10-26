@@ -54,6 +54,42 @@ export const mockGlobalConfig = {
   updated_at: '2024-10-24T15:00:00Z'
 };
 
+export const mockTimeWindowOverrides = [
+  {
+    id: '1',
+    bunker_id: '1',
+    start_time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+    end_time: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours from now
+    reason: 'Harvest operations - keep fans running',
+    is_global: false,
+    created_by: 'admin@farm.com',
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: '2',
+    bunker_id: null,
+    start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+    end_time: new Date(Date.now() + 28 * 60 * 60 * 1000).toISOString(), // Tomorrow + 4 hours
+    reason: 'System maintenance - all fans must run',
+    is_global: true,
+    created_by: 'admin@farm.com',
+    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: '3',
+    bunker_id: '1',
+    start_time: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    end_time: new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString(), // 40 hours ago
+    reason: 'Emergency drying period',
+    is_global: false,
+    created_by: 'operator@farm.com',
+    created_at: new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString()
+  }
+];
+
 export const mockWeatherStations = [
   {
     id: 'KGCK',

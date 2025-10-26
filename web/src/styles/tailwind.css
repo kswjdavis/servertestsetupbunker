@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import print styles */
+@import './print.css';
+
 :root {
   color-scheme: dark;
 }

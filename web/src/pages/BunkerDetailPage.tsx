@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EmergencyToggle from '../components/emergency/EmergencyToggle';
 import EmergencyBanner from '../components/emergency/EmergencyBanner';
-import FanGrid from '../components/bunker/FanGrid';
+import FanLayoutVisualization from '../components/bunker/FanLayoutVisualization';
 import BunkerInfo from '../components/bunker/BunkerInfo';
 import WindIndicator from '../components/bunker/WindIndicator';
 import EnergySavingsDisplay from '../components/bunker/EnergySavingsDisplay';
 import BunkerDeleteModal from '../components/bunker/BunkerDeleteModal';
 import BunkerConfigOverride from '../components/bunker/BunkerConfigOverride';
+import TimeWindowOverridesList from '../components/bunker/TimeWindowOverridesList';
 import { usePoll } from '../hooks/usePoll';
 import { useEnergySavings } from '../hooks/useEnergySavings';
 import { useToast } from '../hooks/useToast';
@@ -226,22 +227,37 @@ export default function BunkerDetailPage() {
         </div>
       )}
 
-      {/* Configuration Overrides */}
-      <div className="mb-6">
-        <BunkerConfigOverride
-          bunker={bunker}
-          onUpdate={(updatedBunker) => {
-            // Update the bunker in the status state
-            setBunkerStatus((prev: any) => ({
-              ...prev,
-              bunker: updatedBunker
-            }));
-          }}
-        />
+      {/* Two column layout for Configuration and Time Overrides */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Configuration Overrides */}
+        <div>
+          <BunkerConfigOverride
+            bunker={bunker}
+            onUpdate={(updatedBunker) => {
+              // Update the bunker in the status state
+              setBunkerStatus((prev: any) => ({
+                ...prev,
+                bunker: updatedBunker
+              }));
+            }}
+          />
+        </div>
+
+        {/* Time Window Overrides */}
+        <div>
+          <TimeWindowOverridesList
+            bunker={bunker}
+            showPastOverrides={false}
+          />
+        </div>
       </div>
 
-      {/* Fan Grid - Full width */}
-      <FanGrid devices={devices || []} onFanClick={handleFanClick} />
+      {/* Fan Layout Visualization - Full width */}
+      <FanLayoutVisualization
+        devices={devices || []}
+        bunker={bunker}
+        onFanClick={handleFanClick}
+      />
 
       {/* Delete Modal */}
       {bunker && (
