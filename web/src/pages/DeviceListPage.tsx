@@ -98,12 +98,24 @@ export default function DeviceListPage() {
       {updating && <UpdateIndicator />}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Device Management</h1>
-        <button
-          onClick={handleProvisionNew}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium min-h-[44px] w-full md:w-auto"
-        >
-          + Provision New Device
-        </button>
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          <button
+            onClick={() => navigate('/bunkers/new')}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium min-h-[44px] w-full md:w-auto flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 4v16m8-8H4" />
+            </svg>
+            Create Bunker
+          </button>
+          <button
+            onClick={handleProvisionNew}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium min-h-[44px] w-full md:w-auto"
+          >
+            + Provision New Device
+          </button>
+        </div>
       </div>
 
       {devices.length === 0 ? (
@@ -166,8 +178,18 @@ export default function DeviceListPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {device.mac_address}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {device.bunker_name}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (device.bunker_id) {
+                              navigate(`/bunkers/${device.bunker_id}`);
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          {device.bunker_name}
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {device.fan_position}
