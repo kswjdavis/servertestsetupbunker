@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   const fetchConfig = async () => {
     try {
-      const data = await configService.getConfig();
+      const data = await configService.getGlobalConfig();
       setConfig(data);
       setFormData(data);
       setErrorMessage('');
@@ -91,7 +91,7 @@ export default function SettingsPage() {
     setSuccessMessage('');
 
     try {
-      const updated = await configService.updateConfig({
+      const updated = await configService.updateGlobalConfig({
         default_wind_threshold_mph: formData.default_wind_threshold_mph,
         default_electricity_cost_kwh: formData.default_electricity_cost_kwh,
         default_fan_power_watts: formData.default_fan_power_watts,

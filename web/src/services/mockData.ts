@@ -40,6 +40,20 @@ export const mockWeatherData = {
   measured_at: new Date().toISOString()
 };
 
+export const mockGlobalConfig = {
+  id: 1,
+  default_wind_threshold_mph: 20, // mph
+  default_electricity_cost_kwh: 0.12, // $/kWh
+  default_fan_power_watts: 1500,
+  weather_station_id: 'KGCK',
+  weather_poll_interval_seconds: 60,
+  shutdown_broadcast_interval_seconds: 60,
+  device_offline_threshold_seconds: 120,
+  emergency_on_global: false,
+  created_at: '2024-01-15T10:00:00Z',
+  updated_at: '2024-10-24T15:00:00Z'
+};
+
 export const mockWeatherStations = [
   {
     id: 'KGCK',

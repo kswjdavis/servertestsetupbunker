@@ -7,6 +7,7 @@ import BunkerInfo from '../components/bunker/BunkerInfo';
 import WindIndicator from '../components/bunker/WindIndicator';
 import EnergySavingsDisplay from '../components/bunker/EnergySavingsDisplay';
 import BunkerDeleteModal from '../components/bunker/BunkerDeleteModal';
+import BunkerConfigOverride from '../components/bunker/BunkerConfigOverride';
 import { usePoll } from '../hooks/usePoll';
 import { useEnergySavings } from '../hooks/useEnergySavings';
 import { useToast } from '../hooks/useToast';
@@ -224,6 +225,20 @@ export default function BunkerDetailPage() {
           <EnergySavingsDisplay savings={energySavings as EnergySavings} showTrend={true} />
         </div>
       )}
+
+      {/* Configuration Overrides */}
+      <div className="mb-6">
+        <BunkerConfigOverride
+          bunker={bunker}
+          onUpdate={(updatedBunker) => {
+            // Update the bunker in the status state
+            setBunkerStatus((prev: any) => ({
+              ...prev,
+              bunker: updatedBunker
+            }));
+          }}
+        />
+      </div>
 
       {/* Fan Grid - Full width */}
       <FanGrid devices={devices || []} onFanClick={handleFanClick} />

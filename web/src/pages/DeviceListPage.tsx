@@ -178,8 +178,18 @@ export default function DeviceListPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {device.mac_address}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {device.bunker_name}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (device.bunker_id) {
+                              navigate(`/bunkers/${device.bunker_id}`);
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          {device.bunker_name}
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {device.fan_position}
