@@ -1,0 +1,59 @@
+@media print {
+  /* Hide interactive elements and navigation */
+  button,
+  .print\\:hidden,
+  .fan-tooltip,
+  nav,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  /* Fan layout visualization specific print styles */
+  .fan-layout-visualization {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure SVG colors print correctly */
+  svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Stop animations for print */
+  .animate-spin,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* Improve contrast for better print quality */
+  .fan-svg {
+    filter: contrast(1.2);
+  }
+
+  /* Ensure borders print */
+  .print\\:border-2 {
+    border-width: 2px !important;
+  }
+
+  /* Remove shadows for cleaner print */
+  .print\\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  /* Prevent page breaks in critical areas */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  /* Ensure text is black for better readability */
+  body {
+    color: black !important;
+  }
+}

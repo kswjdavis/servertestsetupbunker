@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './components/Layout/MainLayout';
 
@@ -8,8 +8,13 @@ import MainLayout from './components/Layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import BunkerDetail from './pages/BunkerDetail';
+import BunkerCreatePage from './pages/BunkerCreatePage';
+import BunkerEditPage from './pages/BunkerEditPage';
 import DeviceList from './pages/DeviceList';
 import Settings from './pages/Settings';
+import ProvisioningPage from './pages/ProvisioningPage';
+import SystemHealthPage from './pages/SystemHealthPage';
+import PrintDeploymentGuidePage from './pages/PrintDeploymentGuidePage';
 
 function App() {
   return (
@@ -19,10 +24,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
+              <Route path="/deployment-guide" element={<PrintDeploymentGuidePage />} />
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/bunkers/new" element={<BunkerCreatePage />} />
                 <Route path="/bunkers/:id" element={<BunkerDetail />} />
+                <Route path="/bunkers/:id/edit" element={<BunkerEditPage />} />
                 <Route path="/devices" element={<DeviceList />} />
+                <Route path="/devices/provision" element={<ProvisioningPage />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>

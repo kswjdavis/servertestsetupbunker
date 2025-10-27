@@ -13,7 +13,7 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
-#include "esp_err.h"
+#include "esp_err_compat.h"
 #include "esp_wifi.h"
 #include <stdint.h>
 #include <stdbool.h>

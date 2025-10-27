@@ -17,6 +17,8 @@
 #include "freertos/task.h"
 #include <string.h>
 #include <time.h>
+#include "http_client_utils.h"
+#include "nvs_storage.h"
 
 static const char *TAG = "http_client";
 
@@ -27,6 +29,7 @@ typedef struct {
     bool initialized;
     bool time_synced;
     esp_err_t last_error;
+    bool auth_token_loaded;
 } http_client_state_t;
 
 static http_client_state_t s_http_state = {
@@ -34,7 +37,8 @@ static http_client_state_t s_http_state = {
     .auth_token = {0},
     .initialized = false,
     .time_synced = false,
-    .last_error = ESP_OK
+    .last_error = ESP_OK,
+    .auth_token_loaded = false
 };
 
 // Forward declarations
@@ -85,8 +89,15 @@ esp_err_t http_client_set_auth_token(const char *token)
         return ESP_ERR_INVALID_SIZE;
     }
 
+    memset(s_http_state.auth_token, 0, sizeof(s_http_state.auth_token));
     strncpy(s_http_state.auth_token, token, sizeof(s_http_state.auth_token) - 1);
-    ESP_LOGI(TAG, "Authentication token set (length: %zu)", strlen(token));
+    s_http_state.auth_token_loaded = strlen(s_http_state.auth_token) > 0;
+
+    if (s_http_state.auth_token_loaded) {
+        ESP_LOGI(TAG, "Authentication token set (first 8 chars): %.8s...", s_http_state.auth_token);
+    } else {
+        ESP_LOGW(TAG, "Authentication token cleared - empty token provided");
+    }
 
     return ESP_OK;
 }
@@ -115,22 +126,29 @@ esp_err_t http_client_set_server_url(const char *url)
 /**
  * @brief Report device status to server (FR23)
  */
-esp_err_t http_client_report_status(const device_status_t *status, http_response_t *response)
+esp_err_t http_client_report_status(const device_status_t *status, server_decision_t *decision)
 {
     if (!s_http_state.initialized) {
         ESP_LOGE(TAG, "HTTP client not initialized");
         return ESP_ERR_INVALID_STATE;
     }
 
-    if (!status) {
+    if (!status || !status->relay_state || !status->firmware_version) {
         ESP_LOGE(TAG, "Invalid status parameter");
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (decision) {
+        decision->shutdown_allowed = false;
+        decision->reset_countdown = false;
+        decision->server_time[0] = '\0';
+        decision->status_code = 0;
+        decision->valid = false;
+    }
+
     // Build endpoint URL
     char url[512];
-    snprintf(url, sizeof(url), "%s/api/v1/devices/%s/status",
-             s_http_state.server_url, status->device_id);
+    snprintf(url, sizeof(url), "%s/api/v1/control/status", s_http_state.server_url);
 
     // Create JSON payload
     cJSON *root = cJSON_CreateObject();
@@ -139,12 +157,11 @@ esp_err_t http_client_report_status(const device_status_t *status, http_response
         return ESP_ERR_NO_MEM;
     }
 
-    cJSON_AddNumberToObject(root, "uptime_sec", status->uptime_sec);
+    cJSON_AddStringToObject(root, "relay_state", status->relay_state);
+    cJSON_AddNumberToObject(root, "uptime_seconds", status->uptime_seconds);
     cJSON_AddNumberToObject(root, "wifi_rssi", status->wifi_rssi);
-    cJSON_AddNumberToObject(root, "free_heap", status->free_heap);
+    cJSON_AddNumberToObject(root, "countdown_timer_remaining", status->countdown_timer_remaining);
     cJSON_AddStringToObject(root, "firmware_version", status->firmware_version);
-    cJSON_AddBoolToObject(root, "connected", status->connected);
-    cJSON_AddNumberToObject(root, "timestamp", esp_timer_get_time() / 1000); // milliseconds
 
     char *json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -156,18 +173,54 @@ esp_err_t http_client_report_status(const device_status_t *status, http_response
 
     ESP_LOGD(TAG, "Status report payload: %s", json_string);
 
-    // Perform HTTP POST
-    esp_err_t ret = http_perform_request(url, HTTP_METHOD_POST, json_string, response);
+    http_response_t response = {0};
+    esp_err_t ret = http_perform_request(url, HTTP_METHOD_POST, json_string, &response);
 
     free(json_string);
 
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Status reported successfully (HTTP %d)",
-                 response ? response->status_code : 0);
-    } else {
+    if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to report status: %s", esp_err_to_name(ret));
+        http_client_free_response(&response);
+        return ret;
     }
 
+    ESP_LOGI(TAG, "Status reported successfully (HTTP %d)", response.status_code);
+
+    if (decision) {
+        decision->status_code = response.status_code;
+    }
+
+    if (response.status_code == HTTP_STATUS_OK && response.body && decision) {
+        cJSON *json = cJSON_Parse(response.body);
+        if (json) {
+            cJSON *shutdown = cJSON_GetObjectItemCaseSensitive(json, "shutdown_allowed");
+            if (cJSON_IsBool(shutdown)) {
+                decision->shutdown_allowed = cJSON_IsTrue(shutdown);
+            }
+
+            cJSON *reset = cJSON_GetObjectItemCaseSensitive(json, "reset_countdown");
+            if (cJSON_IsBool(reset)) {
+                decision->reset_countdown = cJSON_IsTrue(reset);
+            }
+
+            cJSON *server_time = cJSON_GetObjectItemCaseSensitive(json, "server_time");
+            if (cJSON_IsString(server_time) && server_time->valuestring) {
+                strncpy(decision->server_time, server_time->valuestring, sizeof(decision->server_time) - 1);
+                decision->server_time[sizeof(decision->server_time) - 1] = '\0';
+            } else {
+                decision->server_time[0] = '\0';
+            }
+
+            decision->valid = true;
+            cJSON_Delete(json);
+        } else {
+            ESP_LOGW(TAG, "Failed to parse server response JSON");
+        }
+    } else if (response.status_code != HTTP_STATUS_OK && response.body) {
+        ESP_LOGW(TAG, "Server responded with HTTP %d: %s", response.status_code, response.body);
+    }
+
+    http_client_free_response(&response);
     return ret;
 }
 
@@ -220,19 +273,36 @@ esp_err_t http_client_provision_device(const char *device_id, char *token)
         return ret != ESP_OK ? ret : ESP_FAIL;
     }
 
-    // Parse response to extract token
+    // Parse response to extract auth token and LED flash sequence
     if (response.body) {
         cJSON *json = cJSON_Parse(response.body);
         if (json) {
-            cJSON *token_obj = cJSON_GetObjectItem(json, "token");
-            if (token_obj && cJSON_IsString(token_obj)) {
+            cJSON *token_obj = cJSON_GetObjectItemCaseSensitive(json, "auth_token");
+            if (!cJSON_IsString(token_obj)) {
+                token_obj = cJSON_GetObjectItemCaseSensitive(json, "token");
+            }
+
+            if (cJSON_IsString(token_obj)) {
                 strncpy(token, token_obj->valuestring, 127);
                 token[127] = '\0';
-                ESP_LOGI(TAG, "Device provisioned successfully");
+                ESP_LOGI(TAG, "Device provisioned successfully - auth token received");
                 ret = ESP_OK;
             } else {
-                ESP_LOGE(TAG, "Token not found in response");
+                ESP_LOGE(TAG, "Auth token not found in provisioning response");
                 ret = ESP_FAIL;
+            }
+
+            cJSON *sequence_obj = cJSON_GetObjectItemCaseSensitive(json, "led_flash_sequence");
+            if (cJSON_IsNumber(sequence_obj)) {
+                int sequence = sequence_obj->valueint;
+                esp_err_t seq_ret = nvs_storage_set_led_flash_sequence((uint8_t)sequence);
+                if (seq_ret == ESP_OK) {
+                    ESP_LOGI(TAG, "LED flash sequence stored from provisioning response: %d", sequence);
+                } else {
+                    ESP_LOGE(TAG, "Failed to persist LED flash sequence: %s", esp_err_to_name(seq_ret));
+                }
+            } else {
+                ESP_LOGW(TAG, "LED flash sequence missing from provisioning response");
             }
             cJSON_Delete(json);
         } else {
@@ -326,6 +396,18 @@ esp_err_t http_client_deinit(void)
     return ESP_OK;
 }
 
+bool http_client_has_auth_token(void)
+{
+    return s_http_state.auth_token_loaded && strlen(s_http_state.auth_token) > 0;
+}
+
+void http_client_clear_auth_token(void)
+{
+    memset(s_http_state.auth_token, 0, sizeof(s_http_state.auth_token));
+    s_http_state.auth_token_loaded = false;
+    ESP_LOGW(TAG, "Authentication token cleared");
+}
+
 // ============================================================================
 // Internal Functions
 // ============================================================================
@@ -417,49 +499,65 @@ static esp_err_t http_perform_request(const char *url, esp_http_client_method_t 
         .buffer_size_tx = 1024,
     };
 
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    if (!client) {
-        ESP_LOGE(TAG, "Failed to initialize HTTP client");
-        return ESP_FAIL;
-    }
+    esp_err_t err = ESP_FAIL;
 
-    // Set headers
-    esp_http_client_set_header(client, "User-Agent", HTTP_CLIENT_USER_AGENT);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-
-    // Add authentication header if token is set (FR16)
-    if (strlen(s_http_state.auth_token) > 0) {
-        char auth_header[256];
-        snprintf(auth_header, sizeof(auth_header), "Bearer %s", s_http_state.auth_token);
-        esp_http_client_set_header(client, "Authorization", auth_header);
-    }
-
-    // Set POST data if provided
-    if (method == HTTP_METHOD_POST && post_data) {
-        esp_http_client_set_post_field(client, post_data, strlen(post_data));
-    }
-
-    // Perform request
-    esp_err_t err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        int status_code = esp_http_client_get_status_code(client);
-        int content_length = esp_http_client_get_content_length(client);
-
-        ESP_LOGI(TAG, "HTTP Status = %d, content_length = %d", status_code, content_length);
-
-        if (response) {
-            response->status_code = status_code;
-            response->timestamp = esp_timer_get_time() / 1000; // milliseconds
+    for (size_t attempt = 0; attempt < HTTP_RETRY_MAX_ATTEMPTS; ++attempt) {
+        esp_http_client_handle_t client = esp_http_client_init(&config);
+        if (!client) {
+            ESP_LOGE(TAG, "Failed to initialize HTTP client");
+            err = ESP_FAIL;
+            break;
         }
 
-        s_http_state.last_error = ESP_OK;
-    } else {
+        // Set headers
+        esp_http_client_set_header(client, "User-Agent", HTTP_CLIENT_USER_AGENT);
+        esp_http_client_set_header(client, "Content-Type", "application/json");
+
+        // Add authentication header if token is set (FR16)
+        if (strlen(s_http_state.auth_token) > 0) {
+            char auth_header[256];
+            snprintf(auth_header, sizeof(auth_header), "Bearer %s", s_http_state.auth_token);
+            esp_http_client_set_header(client, "Authorization", auth_header);
+            ESP_LOGD(TAG, "Authorization header set (first 8 chars): %.8s...", s_http_state.auth_token);
+        }
+
+        // Set POST data if provided
+        if (method == HTTP_METHOD_POST && post_data) {
+            esp_http_client_set_post_field(client, post_data, strlen(post_data));
+        }
+
+        err = esp_http_client_perform(client);
+
+        if (err == ESP_OK) {
+            int status_code = esp_http_client_get_status_code(client);
+            int content_length = esp_http_client_get_content_length(client);
+
+            ESP_LOGI(TAG, "HTTP Status = %d, content_length = %d", status_code, content_length);
+
+            if (response) {
+                response->status_code = status_code;
+                response->timestamp = esp_timer_get_time() / 1000; // milliseconds
+            }
+
+            s_http_state.last_error = ESP_OK;
+            esp_http_client_cleanup(client);
+            return ESP_OK;
+        }
+
         ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
         s_http_state.last_error = err;
-    }
 
-    esp_http_client_cleanup(client);
+        esp_http_client_cleanup(client);
+
+        if (!http_client_should_retry(attempt)) {
+            break;
+        }
+
+        const uint32_t delay_ms = http_client_backoff_delay_ms(attempt);
+        ESP_LOGW(TAG, "Retrying HTTPS request in %u ms (attempt %zu of %u)",
+                 delay_ms, attempt + 2U, HTTP_RETRY_MAX_ATTEMPTS);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    }
 
     return err;
 }
@@ -485,14 +583,14 @@ static esp_err_t sync_time_sntp(void)
     int retry = 0;
     const int retry_count = 15; // Wait up to 15 seconds
 
-    while (timeinfo.tm_year < (2024 - 1900) && ++retry < retry_count) {
+    while (!http_client_time_is_valid(&timeinfo) && ++retry < retry_count) {
         ESP_LOGD(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
         vTaskDelay(pdMS_TO_TICKS(1000));
         time(&now);
         localtime_r(&now, &timeinfo);
     }
 
-    if (timeinfo.tm_year < (2024 - 1900)) {
+    if (!http_client_time_is_valid(&timeinfo)) {
         ESP_LOGE(TAG, "Failed to sync time via SNTP");
         return ESP_ERR_TIMEOUT;
     }

@@ -7,60 +7,12 @@ from datetime import timedelta
 from uuid import UUID
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.database import get_db
-from app.core.security import clear_revoked_tokens, decode_access_token
-from app.main import app
-from app.models import Base
+from app.core.security import decode_access_token
 from app.schemas.auth import UserCreate
 from app.services.auth_service import AuthService
-
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-
-@pytest.fixture(autouse=True)
-def configure_settings() -> None:
-    """Ensure deterministic security configuration for tests."""
-    original_secret = settings.SECRET_KEY
-    original_expire = settings.ACCESS_TOKEN_EXPIRE_HOURS
-    settings.SECRET_KEY = "test-secret-key"
-    settings.ACCESS_TOKEN_EXPIRE_HOURS = 24
-    clear_revoked_tokens()
-    yield
-    settings.SECRET_KEY = original_secret
-    settings.ACCESS_TOKEN_EXPIRE_HOURS = original_expire
-    clear_revoked_tokens()
-
-
-@pytest_asyncio.fixture()
-async def async_session() -> AsyncSession:
-    """Provide an isolated in-memory database session."""
-    engine = create_async_engine(TEST_DATABASE_URL, future=True)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-
-    TestingSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-    async with TestingSessionLocal() as session:
-        yield session
-
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture()
-async def client(async_session: AsyncSession) -> AsyncClient:
-    """HTTP client with overridden database dependency."""
-
-    async def override_get_db() -> AsyncSession:
-        yield async_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(app=app, base_url="http://test") as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def test_password_hashing_and_verification() -> None:
@@ -86,9 +38,12 @@ async def test_token_contains_user_id(async_session: AsyncSession) -> None:
         )
     )
 
-    token, _ = service.create_access_token(user.id, expires_delta=timedelta(minutes=5))
+    token, _, jti = service.create_access_token(
+        user.id, expires_delta=timedelta(minutes=5)
+    )
     payload = decode_access_token(token)
     assert payload["sub"] == str(user.id)
+    assert payload["jti"] == jti
 
 
 @pytest.mark.asyncio
@@ -176,10 +131,65 @@ async def test_token_expiration_handling(
     user_id = UUID(register_response.json()["id"])
 
     service = AuthService(async_session)
-    token, _ = service.create_access_token(user_id, expires_delta=timedelta(seconds=1))
-    await asyncio.sleep(1.1)
+    token, _, _ = service.create_access_token(
+        user_id, expires_delta=timedelta(seconds=1)
+    )
+    await asyncio.sleep(2.0)
 
     headers = {"Authorization": f"Bearer {token}"}
     response = await client.get("/api/v1/auth/me", headers=headers)
     assert response.status_code == 401
     assert response.json()["detail"] == "Token has expired"
+
+
+@pytest.mark.asyncio
+async def test_short_password_registration_rejected(client: AsyncClient) -> None:
+    """Registration with short password should fail (AC6)."""
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "shortpass",
+            "password": "short7",
+            "email": "short@example.com",
+            "role": "operator",
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_invalid_login_credentials(client: AsyncClient) -> None:
+    """Invalid login attempts return 401 (AC7)."""
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": "invalid_login_user",
+            "password": "password123",
+            "email": "invalid@example.com",
+            "role": "operator",
+        },
+    )
+
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"username": "invalid_login_user", "password": "wrong-password"},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid username or password"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_username_registration_fails(client: AsyncClient) -> None:
+    """Duplicate usernames are rejected."""
+    payload = {
+        "username": "duplicate_user",
+        "password": "password123",
+        "email": "dup@example.com",
+        "role": "operator",
+    }
+    first = await client.post("/api/v1/auth/register", json=payload)
+    assert first.status_code == 201
+
+    second = await client.post("/api/v1/auth/register", json=payload)
+    assert second.status_code == 400
+    assert second.json()["detail"] == "Username already exists"

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, Float, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base, utc_now
@@ -38,6 +38,7 @@ class Bunker(Base):
     wind_threshold_mph: Mapped[float | None] = mapped_column(Float)
     electricity_cost_kwh: Mapped[float] = mapped_column(Float, nullable=False)
     fan_power_watts: Mapped[int] = mapped_column(Integer, nullable=False)
+    emergency_on: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
@@ -60,3 +61,14 @@ class Bunker(Base):
 
     def __repr__(self) -> str:
         return f"<Bunker(id={self.id}, name={self.name}, fan_count={self.fan_count})>"
+
+    @property
+    def device_count(self) -> int:
+        """
+        Convenience property used by API serializers.
+
+        Returns:
+            Number of devices associated with this bunker.
+        """
+        devices = getattr(self, "devices", None)
+        return len(devices) if devices is not None else 0

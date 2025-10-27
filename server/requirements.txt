@@ -3,10 +3,13 @@ uvicorn[standard]>=0.24.0
 sqlalchemy>=2.0.0
 asyncpg>=0.29.0
 psycopg[binary]
-pydantic>=2.0.0
+pydantic[email]>=2.0.0
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.1.2
 httpx
 alembic
 pytest>=7.0.0
 pytest-asyncio
+black
+ruff

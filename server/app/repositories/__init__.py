@@ -6,6 +6,10 @@ from app.repositories.bunker_repository import BunkerRepository
 from app.repositories.device_repository import DeviceRepository
 from app.repositories.device_status_repository import DeviceStatusRepository
 from app.repositories.global_config_repository import GlobalConfigRepository
+from app.repositories.revoked_token_repository import RevokedTokenRepository
+from app.repositories.time_window_override_repository import (
+    TimeWindowOverrideRepository,
+)
 
 __all__ = [
     "BaseRepository",
@@ -14,4 +18,6 @@ __all__ = [
     "DeviceRepository",
     "DeviceStatusRepository",
     "GlobalConfigRepository",
+    "RevokedTokenRepository",
+    "TimeWindowOverrideRepository",
 ]
