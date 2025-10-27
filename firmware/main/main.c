@@ -406,9 +406,34 @@ void app_main(void)
     }
 
     // ========================================================================
-    // Stage 2: Check Provisioning Status
+    // Stage 2: LED Test Mode Setup (before provisioning check for hardware testing)
     // ========================================================================
-    ESP_LOGI(TAG, "[2/6] Checking provisioning status...");
+#ifdef CONFIG_LED_TEST_MODE
+    // In test mode, start LED immediately for hardware validation (Story 5.1)
+    s_led_flash_sequence = CONFIG_LED_TEST_SEQUENCE;
+    ESP_LOGI(TAG, "[2/6] LED Test Mode: Starting flash sequence (%u blinks) on GPIO 5",
+             (unsigned)s_led_flash_sequence);
+
+    if (s_led_flash_sequence >= 1 && s_led_flash_sequence <= 10) {
+        esp_err_t led_err = led_flash_task_start(s_led_flash_sequence);
+        if (led_err == ESP_OK) {
+            s_led_task_started = true;
+            ESP_LOGI(TAG, "LED test mode: Flash task started successfully");
+        } else {
+            ESP_LOGE(TAG, "LED test mode: Failed to start flash task: %s", esp_err_to_name(led_err));
+        }
+    }
+
+    // In test mode, run indefinitely to allow LED observation
+    ESP_LOGI(TAG, "LED Test Mode Active - Device will flash LED continuously");
+    ESP_LOGI(TAG, "Press RESET button to restart or disable CONFIG_LED_TEST_MODE for normal operation");
+    return;  // Exit early in test mode
+#endif
+
+    // ========================================================================
+    // Stage 3: Check Provisioning Status
+    // ========================================================================
+    ESP_LOGI(TAG, "[3/6] Checking provisioning status...");
     bool provisioned = false;
     ret = nvs_storage_is_provisioned(&provisioned);
 
@@ -427,13 +452,8 @@ void app_main(void)
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "LED flash sequence loaded from NVS: %u", (unsigned)s_led_flash_sequence);
     } else if (ret == ESP_ERR_NVS_NOT_FOUND) {
-#ifdef CONFIG_LED_TEST_MODE
-        s_led_flash_sequence = CONFIG_LED_TEST_SEQUENCE;
-        ESP_LOGW(TAG, "LED flash sequence not found in NVS - using test mode sequence: %u", s_led_flash_sequence);
-#else
         ESP_LOGW(TAG, "LED flash sequence not found in NVS - defaulting to disabled");
         s_led_flash_sequence = 0;
-#endif
     } else {
         ESP_LOGE(TAG, "Failed to read LED flash sequence: %s", esp_err_to_name(ret));
         s_led_flash_sequence = 0;
