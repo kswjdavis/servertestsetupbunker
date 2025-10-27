@@ -44,7 +44,7 @@ void watchdog_manager_init(void)
 
     const esp_task_wdt_config_t config = {
         .timeout_ms = WATCHDOG_TIMEOUT_SECONDS * 1000,
-        .idle_core_mask = 0,
+        .idle_core_mask = (1 << 0) | (1 << 1),  // Monitor idle tasks on both cores (Story 2.11)
         .trigger_panic = true,
     };
 
@@ -54,6 +54,8 @@ void watchdog_manager_init(void)
         return;
     }
 
+    ESP_LOGI(TAG, "Task watchdog initialized: %d seconds timeout, monitoring idle tasks on both cores",
+             WATCHDOG_TIMEOUT_SECONDS);
     s_initialized = true;
     log_reset_reason();
 }
@@ -92,4 +94,23 @@ uint32_t watchdog_manager_get_reset_count(void)
 bool watchdog_manager_last_boot_was_watchdog(void)
 {
     return s_last_boot_was_watchdog;
+}
+
+const char* watchdog_manager_get_reset_reason_string(void)
+{
+    esp_reset_reason_t reason = esp_reset_reason();
+
+    switch (reason) {
+        case ESP_RST_POWERON:   return "POWERON";
+        case ESP_RST_EXT:       return "EXTERNAL";
+        case ESP_RST_SW:        return "SOFTWARE";
+        case ESP_RST_PANIC:     return "PANIC";
+        case ESP_RST_INT_WDT:   return "INT_WDT";
+        case ESP_RST_TASK_WDT:  return "TASK_WDT";
+        case ESP_RST_WDT:       return "WDT";
+        case ESP_RST_DEEPSLEEP: return "DEEPSLEEP";
+        case ESP_RST_BROWNOUT:  return "BROWNOUT";
+        case ESP_RST_SDIO:      return "SDIO";
+        default:                return "UNKNOWN";
+    }
 }

@@ -153,6 +153,13 @@ esp_err_t wifi_manager_scan(uint16_t max_ap, wifi_ap_record_t *ap_records, uint1
 esp_err_t wifi_manager_reset_retry_count(void);
 
 /**
+ * @brief Get current WiFi power save mode (Story 2.11)
+ *
+ * @return Power save mode value (0=none, 1=min_modem, 2=max_modem)
+ */
+uint8_t wifi_manager_get_ps_mode(void);
+
+/**
  * @brief Deinitialize WiFi manager and cleanup resources
  *
  * @return ESP_OK on success, error code otherwise

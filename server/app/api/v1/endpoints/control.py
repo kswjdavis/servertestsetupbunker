@@ -52,6 +52,12 @@ async def report_device_status(
             wifi_rssi=payload.wifi_rssi,
             countdown_timer_remaining=payload.countdown_timer_remaining,
             reported_at=received_at,
+            # Story 2.11: Power & Health Telemetry
+            free_heap_bytes=payload.free_heap_bytes,
+            wifi_ps_mode=payload.wifi_ps_mode,
+            cpu_freq_mhz=payload.cpu_freq_mhz,
+            watchdog_reset_count=payload.watchdog_reset_count,
+            last_reset_reason=payload.last_reset_reason,
         )
 
         decision = await control_logic_engine.should_shutdown_fans(

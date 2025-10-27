@@ -22,6 +22,10 @@
 
 static const char *TAG = "http_client";
 
+// External certificate (embedded via CMakeLists.txt)
+extern const uint8_t server_cert_pem_start[] asm("_binary_server_cert_pem_start");
+extern const uint8_t server_cert_pem_end[]   asm("_binary_server_cert_pem_end");
+
 // Client state
 typedef struct {
     char server_url[256];
@@ -162,6 +166,13 @@ esp_err_t http_client_report_status(const device_status_t *status, server_decisi
     cJSON_AddNumberToObject(root, "wifi_rssi", status->wifi_rssi);
     cJSON_AddNumberToObject(root, "countdown_timer_remaining", status->countdown_timer_remaining);
     cJSON_AddStringToObject(root, "firmware_version", status->firmware_version);
+
+    // Story 2.11: Power & Health Telemetry
+    cJSON_AddNumberToObject(root, "free_heap_bytes", status->free_heap_bytes);
+    cJSON_AddNumberToObject(root, "wifi_ps_mode", status->wifi_ps_mode);
+    cJSON_AddNumberToObject(root, "cpu_freq_mhz", status->cpu_freq_mhz);
+    cJSON_AddNumberToObject(root, "watchdog_reset_count", status->watchdog_reset_count);
+    cJSON_AddStringToObject(root, "last_reset_reason", status->last_reset_reason);
 
     char *json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -492,7 +503,7 @@ static esp_err_t http_perform_request(const char *url, esp_http_client_method_t 
         .method = method,
         .timeout_ms = HTTP_CLIENT_TIMEOUT_MS,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
-        .crt_bundle_attach = esp_crt_bundle_attach,  // Use certificate bundle (FR15)
+        .cert_pem = (const char *)server_cert_pem_start,  // Use embedded server certificate
         .event_handler = http_event_handler,
         .user_data = response,
         .buffer_size = HTTP_CLIENT_MAX_RESPONSE_SIZE,

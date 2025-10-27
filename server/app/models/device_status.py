@@ -4,8 +4,9 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import Optional
 
 from app.models import Base, utc_now
 
@@ -46,6 +47,13 @@ class DeviceStatus(Base):
     server_received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+    # Story 2.11: Power & Health Telemetry (all nullable for backward compatibility)
+    free_heap_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    wifi_ps_mode: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    cpu_freq_mhz: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    watchdog_reset_count: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    last_reset_reason: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
     # Relationships
     device: Mapped["Device"] = relationship(back_populates="device_status", lazy="selectin")
