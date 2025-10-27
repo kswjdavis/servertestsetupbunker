@@ -241,6 +241,9 @@ export default function BunkerDetailPage() {
           >
             ← Back to Dashboard
           </button>
+        </div>
+      </div>
+
       {/* Energy Savings Display */}
       {energySavings && 'bunker_id' in energySavings && (
         <div className="mb-6">

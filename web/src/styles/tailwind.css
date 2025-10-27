@@ -1,9 +1,9 @@
+/* Import print styles - must be at the top */
+@import './print.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import print styles */
-@import './print.css';
 
 :root {
   color-scheme: dark;

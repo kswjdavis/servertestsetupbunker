@@ -21,6 +21,7 @@ async def _create_bunker_device_and_config(
     session: AsyncSession,
     *,
     wind_threshold: float | None = 10.0,
+    hysteresis: float | None = None,
     bunker_emergency: bool = False,
     global_emergency: bool = False,
 ) -> tuple[GlobalConfig, Bunker, Device]:
@@ -28,6 +29,7 @@ async def _create_bunker_device_and_config(
     config = GlobalConfig(
         id=1,
         default_wind_threshold_mph=15.0,
+        default_wind_threshold_hysteresis_mph=3.0,
         default_electricity_cost_kwh=0.12,
         default_fan_power_watts=1500,
         weather_station_id="KMSP",
@@ -45,6 +47,7 @@ async def _create_bunker_device_and_config(
         orientation_degrees=0.0,
         fan_count=4,
         wind_threshold_mph=wind_threshold,
+        wind_threshold_hysteresis_mph=hysteresis,
         electricity_cost_kwh=0.10,
         fan_power_watts=1200,
         emergency_on=bunker_emergency,
@@ -258,3 +261,4 @@ async def test_allows_shutdown_at_exact_threshold(
     assert decision.shutdown_allowed is True
     assert decision.reset_countdown is True
     assert decision.reason == "wind_conditions_favorable"
+

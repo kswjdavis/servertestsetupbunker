@@ -21,6 +21,7 @@ class Bunker(Base):
         orientation_degrees: Bunker orientation (0-360)
         fan_count: Number of fans in bunker
         wind_threshold_mph: Wind speed threshold for activation
+        wind_threshold_hysteresis_mph: Hysteresis gap for anti-cycling protection
         electricity_cost_kwh: Cost per kWh for electricity
         fan_power_watts: Power consumption per fan in watts
         created_at: Creation timestamp
@@ -36,6 +37,7 @@ class Bunker(Base):
     orientation_degrees: Mapped[float] = mapped_column(Float, nullable=False)
     fan_count: Mapped[int] = mapped_column(Integer, nullable=False)
     wind_threshold_mph: Mapped[float | None] = mapped_column(Float)
+    wind_threshold_hysteresis_mph: Mapped[float | None] = mapped_column(Float)
     electricity_cost_kwh: Mapped[float] = mapped_column(Float, nullable=False)
     fan_power_watts: Mapped[int] = mapped_column(Integer, nullable=False)
     emergency_on: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

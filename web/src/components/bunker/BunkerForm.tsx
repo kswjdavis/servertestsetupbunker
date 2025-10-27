@@ -154,7 +154,7 @@ export default function BunkerForm({
               onChange={(e) => setFormData(prev => ({ ...prev, wind_threshold: parseInt(e.target.value) || 20 }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-xs text-gray-500 mt-1">Fans turn OFF when wind ≥ threshold</p>
+            <p className="text-xs text-gray-500 mt-1">Fans turn ON when wind ≥ threshold</p>
           </div>
 
           <div>

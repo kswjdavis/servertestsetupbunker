@@ -233,7 +233,7 @@ export default function BunkerConfigOverride({
         </div>
 
         <p className="text-xs text-gray-500 mt-2">
-          Fans turn OFF when wind speed ≥ threshold (natural ventilation sufficient)
+          Fans turn ON when wind speed ≥ threshold (optimal ventilation conditions)
         </p>
       </div>
 

@@ -3,7 +3,7 @@ import { useWeather } from '../../hooks/useWeather';
 import {
   calculateRelativeWind,
   degreesToCardinal16,
-  meetsShutdownCriteria,
+  exceedsWindConditionCriteria,
   formatWindSpeed,
   getWindStatusColor
 } from '../../utils/windCalculations';
@@ -42,7 +42,7 @@ export default function WindIndicator({ bunker, className }: WindIndicatorProps)
   }
 
   const threshold = bunker.wind_threshold || 15; // Default 15 mph if not set
-  const meetsThreshold = meetsShutdownCriteria(
+  const meetsThreshold = exceedsWindConditionCriteria(
     weather.wind_speed,
     weather.wind_direction,
     bunker.orientation,
@@ -75,21 +75,20 @@ export default function WindIndicator({ bunker, className }: WindIndicatorProps)
 
       {/* Status Badge */}
       {/* IMPORTANT LOGIC NOTE:
-          When wind speed >= threshold, fans can be TURNED OFF (shutdown allowed)
-          When wind speed < threshold, fans must REMAIN ON
-          This is because high winds provide natural ventilation for grain drying
-          TODO: Confirm this logic with stakeholders before production
+          When wind speed >= threshold, fans TURN ON automatically
+          When wind speed < threshold, fans CAN BE turned off
+          High winds provide optimal conditions for grain ventilation
       */}
       <div className={`px-4 py-2 rounded-md text-center mb-6 font-medium ${
         meetsThreshold
-          ? 'bg-green-100 text-green-800 border border-green-200'
-          : 'bg-red-100 text-red-800 border border-red-200'
+          ? 'bg-red-100 text-red-800 border border-red-200'
+          : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
       }`}>
-        {meetsThreshold ? '✓ Shutdown Conditions Met' : '⚠ Fans Must Run'}
+        {meetsThreshold ? '✓ Wind Threshold Conditions Met' : '⚡ Below Wind Threshold'}
         <div className="text-xs mt-1 font-normal">
           {meetsThreshold
-            ? 'Wind speed exceeds threshold - fans can be turned off'
-            : 'Wind speed below threshold - fans must remain on'}
+            ? 'Wind exceeds threshold - fans turn on automatically'
+            : 'Wind below threshold - fans can be turned off'}
         </div>
       </div>
 

@@ -18,7 +18,7 @@ const mockConfig: GlobalConfig = {
 
 const helpTextMap = {
   weather_station_id: 'METAR station code (4 letters). Find stations at weather.gov',
-  default_wind_threshold_mph: 'Fans shut down when wind exceeds this speed. Typical: 10-20 mph',
+  default_wind_threshold_mph: 'Fans turn on when wind exceeds this speed. Typical: 10-20 mph',
   default_electricity_cost_kwh: 'Cost per kilowatt-hour in USD. Used for savings calculations',
   default_fan_power_watts: 'Power consumption per fan in watts. Typical: 1000-2000W',
   weather_poll_interval_seconds: 'How often to fetch weather data (recommended: 60s)',

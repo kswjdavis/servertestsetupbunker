@@ -45,23 +45,22 @@ export function degreesToCardinal16(degrees: number): string {
 }
 
 /**
- * Check if wind conditions meet shutdown criteria
+ * Check if wind conditions exceed threshold criteria for fan activation
  * @param windSpeed - Current wind speed in mph
  * @param windDirection - Wind direction in degrees
  * @param bunkerOrientation - Bunker orientation in degrees
  * @param threshold - Wind speed threshold in mph
- * @returns True if conditions allow shutdown
+ * @returns True if wind conditions trigger automatic fan activation
  *
  * IMPORTANT BUSINESS LOGIC:
- * - When wind speed >= threshold: Fans CAN BE TURNED OFF (natural ventilation sufficient)
- * - When wind speed < threshold: Fans MUST REMAIN ON (need mechanical ventilation)
+ * - When wind speed >= threshold: Fans TURN ON automatically (optimal ventilation conditions)
+ * - When wind speed < threshold: Fans CAN BE turned off (insufficient wind for ventilation)
  *
- * The logic is that high winds provide enough natural airflow through the grain bunker
- * for drying and preventing spoilage, so mechanical fans can be shut down to save energy.
- *
- * TODO: Confirm this logic with stakeholders before production deployment
+ * The logic is that high winds provide optimal conditions for grain ventilation.
+ * When wind exceeds the threshold, fans activate to maximize airflow through the bunker.
+ * When wind is below threshold, fans can be turned off to conserve energy.
  */
-export function meetsShutdownCriteria(
+export function exceedsWindConditionCriteria(
   windSpeed: number,
   windDirection: number,
   bunkerOrientation: number,
@@ -71,6 +70,17 @@ export function meetsShutdownCriteria(
   // In future, could also consider direction relative to bunker
   return windSpeed >= threshold;
 }
+
+// Keep old function names for backward compatibility but mark as deprecated
+/**
+ * @deprecated Use exceedsWindConditionCriteria instead
+ */
+export const meetsVentilationCriteria = exceedsWindConditionCriteria;
+
+/**
+ * @deprecated Use exceedsWindConditionCriteria instead
+ */
+export const meetsShutdownCriteria = exceedsWindConditionCriteria;
 
 /**
  * Format wind speed for display
@@ -88,5 +98,5 @@ export function formatWindSpeed(speed: number): string {
  * @returns Tailwind color class
  */
 export function getWindStatusColor(windSpeed: number, threshold: number): string {
-  return windSpeed >= threshold ? 'text-green-600' : 'text-red-600';
+  return windSpeed >= threshold ? 'text-red-600' : 'text-yellow-600';
 }

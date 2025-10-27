@@ -15,6 +15,7 @@ class GlobalConfig(Base):
     Attributes:
         id: Integer primary key (must equal 1)
         default_wind_threshold_mph: Default wind threshold for new bunkers
+        default_wind_threshold_hysteresis_mph: Default hysteresis gap for anti-cycling
         default_electricity_cost_kwh: Default electricity cost for new bunkers
         default_fan_power_watts: Default fan power consumption for new bunkers
         weather_station_id: Weather station identifier to use (e.g., 'KOKC')
@@ -27,6 +28,7 @@ class GlobalConfig(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     default_wind_threshold_mph: Mapped[float] = mapped_column(Float, nullable=False, default=15.0)
+    default_wind_threshold_hysteresis_mph: Mapped[float] = mapped_column(Float, nullable=False, default=3.0)
     default_electricity_cost_kwh: Mapped[float] = mapped_column(Float, nullable=False, default=0.12)
     default_fan_power_watts: Mapped[int] = mapped_column(Integer, nullable=False, default=1500)
     weather_station_id: Mapped[str] = mapped_column(String(10), nullable=False, default="KOKC")
