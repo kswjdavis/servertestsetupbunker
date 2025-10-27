@@ -31,6 +31,8 @@ export interface Bunker {
   orientation: number;
   fan_count: number;
   wind_threshold: number; // mph
+  electricity_cost_kwh?: number;
+  fan_power_watts?: number;
   is_active: boolean;
   status?: 'online' | 'offline' | 'energy_saving';
   emergency_on_bunker?: boolean;
