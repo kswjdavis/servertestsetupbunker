@@ -53,7 +53,7 @@ typedef struct {
 } http_response_t;
 
 /**
- * @brief Device status data for reporting (FR23)
+ * @brief Device status data for reporting (FR23 + Story 2.11 telemetry)
  */
 typedef struct {
     const char *relay_state;           // Current relay state ("ON"/"OFF")
@@ -61,6 +61,13 @@ typedef struct {
     int32_t wifi_rssi;                 // WiFi signal strength (dBm)
     uint32_t countdown_timer_remaining; // Countdown timer remaining (seconds)
     const char *firmware_version;      // Firmware version string
+
+    // Story 2.11: Power & Health Telemetry
+    uint32_t free_heap_bytes;          // Free heap memory (bytes)
+    uint8_t wifi_ps_mode;              // WiFi power save mode (0=none, 1=min_modem, 2=max_modem)
+    uint16_t cpu_freq_mhz;             // Current CPU frequency (MHz)
+    uint8_t watchdog_reset_count;      // Cumulative watchdog reset count (from RTC memory)
+    const char *last_reset_reason;     // Last reset reason string
 } device_status_t;
 
 /**

@@ -41,6 +41,12 @@ class DeviceStatusRepository(BaseRepository[DeviceStatus]):
         wifi_rssi: int,
         countdown_timer_remaining: int,
         reported_at: datetime,
+        # Story 2.11: Power & Health Telemetry (all optional)
+        free_heap_bytes: int | None = None,
+        wifi_ps_mode: int | None = None,
+        cpu_freq_mhz: int | None = None,
+        watchdog_reset_count: int | None = None,
+        last_reset_reason: str | None = None,
     ) -> DeviceStatus:
         """
         Insert or update device status (upsert operation).
@@ -54,6 +60,11 @@ class DeviceStatusRepository(BaseRepository[DeviceStatus]):
             wifi_rssi: WiFi signal strength in dBm
             countdown_timer_remaining: Countdown timer remaining (0-300 seconds)
             reported_at: Timestamp from device when status was generated
+            free_heap_bytes: Free heap memory in bytes (Story 2.11)
+            wifi_ps_mode: WiFi power save mode (Story 2.11)
+            cpu_freq_mhz: CPU frequency in MHz (Story 2.11)
+            watchdog_reset_count: Watchdog reset count (Story 2.11)
+            last_reset_reason: Last reset reason string (Story 2.11)
 
         Returns:
             Created or updated DeviceStatus instance
@@ -65,6 +76,11 @@ class DeviceStatusRepository(BaseRepository[DeviceStatus]):
             wifi_rssi=wifi_rssi,
             countdown_timer_remaining=countdown_timer_remaining,
             reported_at=reported_at,
+            free_heap_bytes=free_heap_bytes,
+            wifi_ps_mode=wifi_ps_mode,
+            cpu_freq_mhz=cpu_freq_mhz,
+            watchdog_reset_count=watchdog_reset_count,
+            last_reset_reason=last_reset_reason,
         )
 
         # On conflict (device_id already exists), update all fields
@@ -77,6 +93,11 @@ class DeviceStatusRepository(BaseRepository[DeviceStatus]):
                 "countdown_timer_remaining": countdown_timer_remaining,
                 "reported_at": reported_at,
                 "server_received_at": utc_now(),
+                "free_heap_bytes": free_heap_bytes,
+                "wifi_ps_mode": wifi_ps_mode,
+                "cpu_freq_mhz": cpu_freq_mhz,
+                "watchdog_reset_count": watchdog_reset_count,
+                "last_reset_reason": last_reset_reason,
             },
         )
 

@@ -118,6 +118,15 @@ esp_err_t wifi_manager_init(void)
     // Start WiFi
     ESP_ERROR_CHECK(esp_wifi_start());
 
+    // Enable WiFi modem sleep for power savings (Story 2.11)
+    // Reduces power consumption by ~50% while keeping WiFi connected
+    ret = esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "WiFi modem sleep enabled (WIFI_PS_MIN_MODEM)");
+    } else {
+        ESP_LOGW(TAG, "Failed to enable WiFi modem sleep: %s", esp_err_to_name(ret));
+    }
+
     ESP_LOGI(TAG, "WiFi manager initialized successfully");
     return ESP_OK;
 }
@@ -473,4 +482,21 @@ static void notify_state_change(wifi_state_t new_state)
     if (s_wifi_state.callback) {
         s_wifi_state.callback(new_state, s_wifi_state.callback_ctx);
     }
+}
+
+/**
+ * @brief Get current WiFi power save mode (Story 2.11)
+ */
+uint8_t wifi_manager_get_ps_mode(void)
+{
+    wifi_ps_type_t ps_type;
+    esp_err_t ret = esp_wifi_get_ps(&ps_type);
+
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to get WiFi power save mode: %s", esp_err_to_name(ret));
+        return 0;  // Return WIFI_PS_NONE as default
+    }
+
+    // Return numeric value: 0=none, 1=min_modem, 2=max_modem
+    return (uint8_t)ps_type;
 }

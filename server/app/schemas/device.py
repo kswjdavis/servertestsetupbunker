@@ -89,6 +89,12 @@ class DeviceStatusRequest(BaseModel):
         max_length=50,
         description="Firmware semantic version string",
     )
+    # Story 2.11: Power & Health Telemetry (all optional for backward compatibility)
+    free_heap_bytes: int | None = Field(default=None, ge=0, description="Free heap memory in bytes")
+    wifi_ps_mode: int | None = Field(default=None, ge=0, le=2, description="WiFi power save mode (0=none, 1=min_modem, 2=max_modem)")
+    cpu_freq_mhz: int | None = Field(default=None, ge=0, le=240, description="CPU frequency in MHz")
+    watchdog_reset_count: int | None = Field(default=None, ge=0, description="Number of watchdog resets from RTC memory")
+    last_reset_reason: str | None = Field(default=None, max_length=20, description="Last reset reason string")
 
 
 class DeviceStatusResponse(BaseModel):
