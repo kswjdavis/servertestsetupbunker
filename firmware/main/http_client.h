@@ -18,7 +18,7 @@
 #ifndef HTTP_CLIENT_H
 #define HTTP_CLIENT_H
 
-#include "esp_err.h"
+#include "esp_err_compat.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -56,13 +56,23 @@ typedef struct {
  * @brief Device status data for reporting (FR23)
  */
 typedef struct {
-    char device_id[64];         // Device unique identifier
-    uint32_t uptime_sec;        // Device uptime in seconds
-    int8_t wifi_rssi;           // WiFi signal strength (dBm)
-    uint32_t free_heap;         // Free heap memory (bytes)
-    const char *firmware_version; // Firmware version string
-    bool connected;             // WiFi connection status
+    const char *relay_state;           // Current relay state ("ON"/"OFF")
+    uint32_t uptime_seconds;           // Device uptime in seconds
+    int32_t wifi_rssi;                 // WiFi signal strength (dBm)
+    uint32_t countdown_timer_remaining; // Countdown timer remaining (seconds)
+    const char *firmware_version;      // Firmware version string
 } device_status_t;
+
+/**
+ * @brief Parsed server decision payload returned after status report.
+ */
+typedef struct {
+    bool shutdown_allowed;             // True when device may shutdown fans
+    bool reset_countdown;              // True when countdown timer should reset
+    char server_time[32];              // Server-provided ISO 8601 timestamp
+    int status_code;                   // HTTP status code from response
+    bool valid;                        // True when JSON payload parsed successfully
+} server_decision_t;
 
 /**
  * @brief Initialize HTTP client
@@ -95,13 +105,13 @@ esp_err_t http_client_set_server_url(const char *url);
 /**
  * @brief Report device status to server (FR23)
  *
- * POST /api/v1/devices/{device_id}/status
+ * POST /api/v1/control/status
  *
  * @param status Device status data to report
- * @param response Optional pointer to store server response (caller must free)
+ * @param decision Optional pointer to receive parsed server decision payload
  * @return ESP_OK on success, error code otherwise
  */
-esp_err_t http_client_report_status(const device_status_t *status, http_response_t *response);
+esp_err_t http_client_report_status(const device_status_t *status, server_decision_t *decision);
 
 /**
  * @brief Provision device and obtain authentication token
@@ -164,6 +174,21 @@ esp_err_t http_client_get_last_error(void);
  * @return ESP_OK on success, error code otherwise
  */
 esp_err_t http_client_deinit(void);
+
+/**
+ * @brief Check whether an authentication token is configured.
+ *
+ * @return true if a token is available, false otherwise.
+ */
+bool http_client_has_auth_token(void);
+
+/**
+ * @brief Clear the currently configured authentication token.
+ *
+ * Useful after detecting an authentication failure that requires
+ * reprovisioning.
+ */
+void http_client_clear_auth_token(void);
 
 #ifdef __cplusplus
 }

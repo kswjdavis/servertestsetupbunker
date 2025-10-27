@@ -1,8 +1,8 @@
 # Claude Code Session Context
 
 **Project:** Bunkercolab - Grain Bunker Fan Control System
-**Last Updated:** October 23, 2025
-**Current Sprint:** Epic 1 - Foundation & Device Communication
+**Last Updated:** October 24, 2025
+**Current Sprint:** Epic 2 - Control & Safety Systems
 
 ---
 
@@ -54,32 +54,40 @@ Bunkercolab/
 
 ## Current Progress
 
-### ✅ Completed Stories
+### ✅ Completed Stories (Epic 1)
 
-**Story 1.1: Project Scaffolding (Ready for Review)**
-- FastAPI health endpoint: `/api/healthz`
+**Story 1.1: Project Scaffolding (Done)**
+- FastAPI health endpoint: `/healthz`
 - React + Vite scaffolding
 - Deployed to production: http://206.189.210.203
 - All 10 acceptance criteria verified on live server
 
-**Story 1.2: Database Schema and Migrations (Ready for Review)**
+**Story 1.2: Database Schema and Migrations (Done)**
 - 8 tables created and deployed to production
 - Alembic migrations configured (async SQLAlchemy 2.0)
 - Repository pattern implemented (6 repositories)
 - Migration ID: `78c833ebcaf5_initial_schema...`
 - All 12 acceptance criteria completed
 
-**Firmware (Epic 1 Stories 1.5-1.8) - Merged from worktree:**
+**Story 1.3: User Authentication APIs (Done)**
+- User registration and login endpoints
+- JWT token authentication
+- Password hashing with bcrypt
+- Role-based access control (admin/operator/viewer)
+
+**Firmware (Epic 1 Stories 1.5-1.8) - Done:**
 - WiFi manager with reconnection strategy
 - HTTPS client with TLS validation
 - NVS storage for credentials
 - Status reporting every 60 seconds
 - See: `firmware/docs/EPIC1_ACCEPTANCE_CRITERIA.md`
 
-### 🚧 Next Stories
+### 🚧 In Progress (Epic 2)
 
-**Story 1.3:** User Authentication APIs (Not Started)
-**Story 1.4:** Device Provisioning APIs (Not Started)
+**Story 2.1: Dead Man Timer (Done)**
+**Story 2.2: Relay Controller (In Progress)**
+**Story 2.3: Hardware Watchdog (In Progress)**
+**Story 2.4: Weather API Integration (In Progress)**
 
 ---
 
@@ -95,13 +103,22 @@ Bunkercolab/
 - All tables created and ready
 
 **Services:**
-- FastAPI: `systemctl status bunkercolab-api`
+- FastAPI: `systemctl status bunkercolab`
 - Nginx: `systemctl status nginx`
 - PostgreSQL: `systemctl status postgresql`
 
 **Endpoints:**
-- Health: http://206.189.210.203/api/healthz
-- API: http://206.189.210.203/api/
+- Health: http://206.189.210.203/healthz
+- API v1: http://206.189.210.203/api/v1/
+- API Docs: http://206.189.210.203/docs
+- ReDoc: http://206.189.210.203/redoc
+
+**Available API Endpoints (v1):**
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login (returns JWT token)
+- `POST /api/v1/devices/provision` - Device provisioning
+- `POST /api/v1/control/status` - Device status reporting (used by ESP32)
+- `GET /api/v1/weather/current` - Current weather data (requires authentication)
 
 ---
 
@@ -136,9 +153,17 @@ Bunkercolab/
 
 ### Git Workflow
 - **Main branch:** Stable, deployable code
+- **Current branch:** Jeff (feature branch for Epic 2 work)
 - **Commits:** Descriptive, include context and "why"
 - **Co-authoring:** All commits co-authored with Claude
 - **Deployment:** Push triggers manual deployment via rsync
+
+### Current Git Status
+Working on feature branch `Jeff` with Epic 2 stories in progress. Modified files include:
+- Relay controller implementation (firmware)
+- Hardware watchdog (firmware)
+- Weather service integration (server)
+- Story documentation updates
 
 ### Story Status Values
 - "Backlog" → "Ready for Dev" → "In Progress" → "Ready for Review" → "Done"
@@ -155,7 +180,7 @@ rsync -avz -e "ssh -i ../SSH_Key/.ssh/deploy_key" \
   ./ root@206.189.210.203:/home/bunkercolab/Bunkercolab/server/
 
 ssh -i ../SSH_Key/.ssh/deploy_key root@206.189.210.203 \
-  'systemctl restart bunkercolab-api'
+  'systemctl restart bunkercolab'
 ```
 
 ### Run Database Migration
@@ -190,7 +215,7 @@ ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
 ```bash
 # FastAPI logs
 ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
-  'journalctl -u bunkercolab-api -f'
+  'journalctl -u bunkercolab -f'
 
 # Nginx logs
 ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
@@ -201,17 +226,32 @@ ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
 
 ## Important Notes
 
+### Service Name Correction
+**Correct service name:** `bunkercolab` (NOT `bunkercolab-api`)
+- Use: `systemctl status bunkercolab`
+- Use: `systemctl restart bunkercolab`
+- Use: `journalctl -u bunkercolab -f`
+
+### Endpoint Path Correction
+**Health check endpoint:** `/healthz` (NOT `/api/healthz`)
+- The health endpoint is at root level
+- All API endpoints use `/api/v1/` prefix
+- API documentation is at `/docs` and `/redoc`
+
 ### Database Password Change
 **Old:** `Bunker1!` (had special character issues with shell escaping)
 **New:** `Bunker123` (simpler, no escaping needed)
 **Updated in:** Production `.env`, this documentation
 
 ### Git History Context
+- **Commit a4974ec:** Story 2.1 complete
+- **Commit 6fd81c3:** Epic 1 Complete
+- **Commit 4e98dc3:** Starting own Branch (Jeff branch)
+- **Commit 049ad32:** Story 1.3 completion
+- **Commit b33628e:** Add CLAUDE.md - AI session context document
 - **Commit 65cb282:** Added DROPLET_ACCESS.md
 - **Commit 0e0890b:** Story 1.2 status → Ready for Review
 - **Commit 26a22d8:** Story 1.2 complete implementation
-- **Commit 3f32237:** Merged firmware from epic-1-foundation worktree
-- **Commit 781d001:** Updated Ubuntu 22.04 → 24.04 LTS
 
 ### Worktree Cleanup (Completed)
 - **Issue:** Two developers worked on 1.1 (main branch + worktree)
@@ -222,12 +262,19 @@ ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
 
 ## Testing
 
-### Live Server Tests (Story 1.1)
+### Live Server Tests
 ```bash
 # Health check
-curl http://206.189.210.203/api/healthz
-
+curl http://206.189.210.203/healthz
 # Should return: {"status":"ok"}
+
+# API documentation (interactive web interface)
+open http://206.189.210.203/docs
+# Or for text-based access:
+curl -s http://206.189.210.203/openapi.json | python3 -m json.tool | less
+
+# Check service status
+ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'systemctl status bunkercolab'
 ```
 
 ### Database Schema Verification
@@ -254,13 +301,17 @@ ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 \
 
 ### FastAPI Service Not Starting
 ```bash
-# Check logs
-journalctl -u bunkercolab-api -n 50
+# Check logs (run on production server)
+journalctl -u bunkercolab -n 50
 
 # Common issues:
 # - Missing .env file
 # - Database connection failed
 # - Import errors (missing dependencies)
+
+# Restart service
+systemctl restart bunkercolab
+systemctl status bunkercolab
 ```
 
 ---
@@ -271,9 +322,10 @@ When resuming work:
 1. ✅ Read this CLAUDE.md file
 2. ✅ Check current story status in `docs/stories/`
 3. ✅ Review last 3-5 git commits: `git log --oneline -5`
-4. ✅ Verify production health: `curl http://206.189.210.203/api/healthz`
-5. ✅ Load BMAD config if using agents: `.bmad-core/core-config.yaml`
-6. ✅ Check for any uncommitted changes: `git status`
+4. ✅ Verify production health: `curl http://206.189.210.203/healthz`
+5. ✅ Check service status: `ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'systemctl status bunkercolab'`
+6. ✅ Load BMAD config if using agents: `.bmad-core/core-config.yaml`
+7. ✅ Check for any uncommitted changes: `git status`
 
 ---
 

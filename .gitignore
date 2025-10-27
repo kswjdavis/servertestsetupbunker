@@ -37,6 +37,7 @@ __pycache__/
 server/.env
 server/.env.docker
 web/.env.local
+!server/.env.production.example
 
 # SSH Keys (NEVER commit private keys!)
 SSH_Key/
@@ -52,6 +53,11 @@ deploy_key.pub
 firmware/build/
 firmware/sdkconfig
 firmware/sdkconfig.old
+
+# NVS provisioning files (contain credentials - NEVER commit!)
+firmware/nvs_provision.csv
+firmware/nvs_partition.bin
+firmware/provision_nvs.sh
 
 # macOS / IDE cruft
 .DS_Store

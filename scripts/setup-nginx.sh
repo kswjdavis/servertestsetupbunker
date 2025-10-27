@@ -97,13 +97,13 @@ if [[ "$USE_SSL" == "true" ]]; then
     echo
     echo "=== Next Steps ==="
     echo "1. Ensure DNS is pointed to this server's IP address"
-    echo "2. Deploy frontend: bash scripts/deploy-web.sh"
+    echo "2. Deploy frontend: bash scripts/build-web.sh"
     echo "3. Setup SSL: sudo certbot --nginx -d $DOMAIN_NAME"
 else
     echo "HTTP-only mode (no SSL)"
     echo
     echo "=== Next Steps ==="
-    echo "1. Deploy frontend: bash scripts/deploy-web.sh"
+    echo "1. Deploy frontend: bash scripts/build-web.sh"
     echo "2. Access via: http://YOUR_SERVER_IP"
 fi
 echo

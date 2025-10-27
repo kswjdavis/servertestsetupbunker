@@ -1,11 +1,18 @@
 idf_component_register(
     SRCS
-        "main.c"
-        "wifi_manager.c"
-        "nvs_storage.c"
-        "provisioning.c"
-        "status_client.c"
-        "time_sync.c"
+        "led_test.c"
+        # "main.c"
+        # "wifi_manager.c"
+        # "nvs_storage.c"
+        # "http_client.c"
+        # "http_client_utils.c"
+        # "deadman_timer.c"
+        # "relay_controller.c"
+        # "led_controller.c"
+        # "auth_fail_safe.c"
+        # "watchdog_manager.c"
+        # "control_loop_logic.c"
+        # "ota_updater.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi
@@ -14,9 +21,12 @@ idf_component_register(
         nvs_flash
         esp_http_server
         esp_http_client
-        esp_tls
+        esp-tls
         esp_timer
-        cjson
-    EMBED_TXTFILES
-        "certs/root_cert.pem"
+        esp_https_ota
+        json
+    PRIV_REQUIRES
+        esp_driver_gpio
+    # EMBED_TXTFILES
+    #     "certs/root_cert.pem"
 )

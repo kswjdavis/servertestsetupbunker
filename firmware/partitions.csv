@@ -1,10 +1,6 @@
-# ESP32 Partition Table for Bunkercolab Firmware
+# ESP32 Partition Table for Bunkercolab Firmware (4MB Flash)
 # Name,   Type, SubType, Offset,  Size, Flags
-# Bootloader occupies 0x1000-0x8000 automatically
-nvs,      data, nvs,     0x9000,  0x6000,
-phy_init, data, phy,     0xf000,  0x1000,
-factory,  app,  factory, 0x10000, 1M,
-ota_0,    app,  ota_0,   0x110000,1M,
-ota_1,    app,  ota_1,   0x210000,1M,
-nvs_key,  data, nvs_keys,0x310000,0x1000,
-storage,  data, spiffs,  0x311000,0xEF000,
+# Bootloader + partition table: 0x1000-0xB000
+nvs,      data, nvs,     0xC000,  0x4000,
+phy_init, data, phy,     0x10000, 0x1000,
+factory,  app,  factory, 0x20000, 1408K,

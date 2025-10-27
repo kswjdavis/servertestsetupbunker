@@ -220,6 +220,27 @@ export default function BunkerDetailPage() {
         </div>
       </div>
 
+      {/* Actions */}
+      <div className="mt-6">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => navigate(`/deployment-guide?bunkerId=${bunker.id}`)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Generate Deployment Guide
+          </button>
+          <button
+            onClick={() => navigate('/deployment-guide')}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+          >
+            View All Bunker Guides
+          </button>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+          >
+            ← Back to Dashboard
+          </button>
       {/* Energy Savings Display */}
       {energySavings && 'bunker_id' in energySavings && (
         <div className="mb-6">

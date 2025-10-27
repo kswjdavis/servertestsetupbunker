@@ -13,6 +13,8 @@ import BunkerEditPage from './pages/BunkerEditPage';
 import DeviceList from './pages/DeviceList';
 import Settings from './pages/Settings';
 import ProvisioningPage from './pages/ProvisioningPage';
+import SystemHealthPage from './pages/SystemHealthPage';
+import PrintDeploymentGuidePage from './pages/PrintDeploymentGuidePage';
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
+              <Route path="/deployment-guide" element={<PrintDeploymentGuidePage />} />
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/bunkers/new" element={<BunkerCreatePage />} />

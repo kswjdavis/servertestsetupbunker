@@ -216,6 +216,7 @@ export const mockDevices = [
     bunker_name: 'Deerfield',
     fan_position: 1,
     mac_address: 'AA:BB:CC:DD:EE:01',
+    auth_token: 'AUTH-DEV-0001-ABC1',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 30000).toISOString(), // 30 seconds ago
     provisioned_at: '2024-10-20T10:00:00Z',
@@ -228,6 +229,7 @@ export const mockDevices = [
     bunker_name: 'Deerfield',
     fan_position: 2,
     mac_address: 'AA:BB:CC:DD:EE:02',
+    auth_token: 'AUTH-DEV-0002-ABC2',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
     provisioned_at: '2024-10-20T10:05:00Z',
@@ -240,6 +242,7 @@ export const mockDevices = [
     bunker_name: 'Deerfield',
     fan_position: 3,
     mac_address: 'AA:BB:CC:DD:EE:03',
+    auth_token: 'AUTH-DEV-0003-ABC3',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 45000).toISOString(), // 45 seconds ago
     provisioned_at: '2024-10-21T14:00:00Z',
@@ -252,6 +255,7 @@ export const mockDevices = [
     bunker_name: 'PlumCreek Syracuse',
     fan_position: 1,
     mac_address: 'AA:BB:CC:DD:EE:04',
+    auth_token: 'AUTH-DEV-0004-ABC4',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 150000).toISOString(), // 2.5 minutes ago - offline
     provisioned_at: '2024-10-21T14:10:00Z',
@@ -264,6 +268,7 @@ export const mockDevices = [
     bunker_name: 'PlumCreek Syracuse',
     fan_position: 2,
     mac_address: 'AA:BB:CC:DD:EE:05',
+    auth_token: 'AUTH-DEV-0005-ABC5',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 20000).toISOString(), // 20 seconds ago
     provisioned_at: '2024-10-22T09:00:00Z',
@@ -276,6 +281,7 @@ export const mockDevices = [
     bunker_name: 'PlumCreek Syracuse',
     fan_position: 3,
     mac_address: 'AA:BB:CC:DD:EE:06',
+    auth_token: 'AUTH-DEV-0006-ABC6',
     firmware_version: '1.0.0',
     last_seen: new Date(Date.now() - 90000).toISOString(), // 1.5 minutes ago
     provisioned_at: '2024-10-22T09:10:00Z',
