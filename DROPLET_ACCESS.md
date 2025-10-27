@@ -48,17 +48,17 @@ ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'su - postgres -c "psql -d b
 ### FastAPI Backend Service
 ```bash
 # Status
-systemctl status bunkercolab-api
+systemctl status bunkercolab
 
 # Logs
-journalctl -u bunkercolab-api -f
+journalctl -u bunkercolab -f
 
 # Restart
-systemctl restart bunkercolab-api
+systemctl restart bunkercolab
 
 # Stop/Start
-systemctl stop bunkercolab-api
-systemctl start bunkercolab-api
+systemctl stop bunkercolab
+systemctl start bunkercolab
 ```
 
 ### Nginx
@@ -86,28 +86,27 @@ systemctl status postgresql
 
 Located in `scripts/` directory:
 - `setup-droplet.sh` - Initial server setup
-- `deploy-server.sh` - Deploy FastAPI backend
-- `deploy-web.sh` - Deploy React frontend
-- `setup-nginx.sh` - Configure Nginx
+- `setup-db.sh` - Provision PostgreSQL database/user
+- `deploy-server.sh` - Deploy FastAPI backend + systemd unit
+- `build-web.sh` - Build & deploy React frontend bundle
+- `setup-nginx.sh` - Configure Nginx (legacy helper)
 
 ## Quick Deploy Commands
 
 ### Deploy Backend
 ```bash
-rsync -avz -e "ssh -i SSH_Key/.ssh/deploy_key" --exclude '.git' --exclude 'venv' --exclude '__pycache__' server/ root@206.189.210.203:/home/bunkercolab/Bunkercolab/server/
-
-ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'systemctl restart bunkercolab-api'
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203 'cd ~/Bunkercolab/scripts && ./deploy-server.sh'
 ```
 
-### Run Database Migrations
+### Build Frontend
 ```bash
-ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'cd /home/bunkercolab/Bunkercolab/server && source venv/bin/activate && alembic upgrade head'
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203 'cd ~/Bunkercolab/scripts && ./build-web.sh'
 ```
 
 ## Environment Files
 
 ### Server .env (Production)
-Location: `/home/bunkercolab/Bunkercolab/server/.env`
+Location: `/home/bunkercolab/Bunkercolab/server/.env.production`
 ```env
 DATABASE_URL=postgresql+asyncpg://bunkercolab_user:Bunker123@localhost/bunkercolab
 SECRET_KEY=change-me-in-production
@@ -151,7 +150,7 @@ curl http://206.189.210.203/api/healthz
 
 ### Check backend service logs
 ```bash
-ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'journalctl -u bunkercolab-api -n 50'
+ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203 'journalctl -u bunkercolab -n 50'
 ```
 
 ### Check database tables

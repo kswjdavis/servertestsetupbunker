@@ -27,6 +27,9 @@ export default function Header() {
                 <Link to="/dashboard" className="hover:text-gray-300">
                   Dashboard
                 </Link>
+                <Link to="/system-health" className="hover:text-gray-300">
+                  System Health
+                </Link>
                 <Link to="/devices" className="hover:text-gray-300">
                   Devices
                 </Link>
@@ -71,6 +74,9 @@ export default function Header() {
             <nav className="flex space-x-4 text-sm">
               <Link to="/dashboard" className="hover:text-gray-300">
                 Dashboard
+              </Link>
+              <Link to="/system-health" className="hover:text-gray-300">
+                System Health
               </Link>
               <Link to="/devices" className="hover:text-gray-300">
                 Devices

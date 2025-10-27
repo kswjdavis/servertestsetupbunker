@@ -6,6 +6,7 @@ from .control_logic_engine import (
     ControlLogicError,
     control_logic_engine,
 )
+from .system_health_service import SystemHealthService
 from .weather_service import (
     WeatherService,
     convert_c_to_f,
@@ -20,6 +21,7 @@ __all__ = [
     "WeatherService",
     "control_logic_engine",
     "weather_service",
+    "SystemHealthService",
     "convert_c_to_f",
     "convert_kmh_to_mph",
 ]

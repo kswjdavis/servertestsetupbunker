@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 
 
@@ -34,6 +35,12 @@ class Settings:
         self.WEATHER_USER_AGENT: str = os.getenv(
             "WEATHER_USER_AGENT", "BunkerColab/1.0 (contact@yourdomain.com)"
         )
+        firmware_storage = os.getenv("FIRMWARE_STORAGE_DIR")
+        if firmware_storage:
+            self.FIRMWARE_STORAGE_DIR: Path = Path(firmware_storage).expanduser().resolve()
+        else:
+            self.FIRMWARE_STORAGE_DIR = (Path(__file__).resolve().parent.parent / "firmware_storage").resolve()
+        self.FIRMWARE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def _get_int_env(name: str, default: int) -> int:

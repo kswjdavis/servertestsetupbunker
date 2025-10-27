@@ -38,6 +38,8 @@
 #include "esp_timer.h"
 #include "control_loop_logic.h"
 #include "led_controller.h"
+#include "ota_updater.h"
+#include "firmware_version.h"
 
 // Logging tag
 static const char *TAG = "main";
@@ -60,9 +62,6 @@ static bool s_led_task_started = false;
 
 // Status reporting interval (FR23: 60 seconds)
 #define STATUS_REPORT_INTERVAL_MS   60000
-
-// Firmware version
-#define FIRMWARE_VERSION "1.0.0-epic1"
 
 static void watchdog_delay_with_feed(TickType_t total_delay_ticks)
 {
@@ -496,6 +495,12 @@ void app_main(void)
     }
 
     ESP_LOGI(TAG, "HTTPS client initialized");
+
+    // Start OTA updater task (best-effort; device continues even if task fails to start)
+    esp_err_t ota_ret = ota_updater_start(server_url);
+    if (ota_ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to start OTA updater: %s", esp_err_to_name(ota_ret));
+    }
 
     // ========================================================================
     // Stage 6: Start Control Loop Task

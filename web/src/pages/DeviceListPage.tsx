@@ -9,6 +9,7 @@ import { isDeviceOnline, formatLastSeen } from '../utils/deviceHelpers';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 import DeviceStatusBadge from '../components/device/DeviceStatusBadge';
+import FirmwareVersion from '../components/device/FirmwareVersion';
 import DeviceDeleteModal from '../components/device/DeviceDeleteModal';
 import type { DeviceWithBunkerInfo } from '../types/api';
 
@@ -146,6 +147,9 @@ export default function DeviceListPage() {
                       Fan Position
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Firmware
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -171,6 +175,9 @@ export default function DeviceListPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {device.fan_position}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <FirmwareVersion version={device.firmware_version} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <DeviceStatusBadge isOnline={device.is_online} />

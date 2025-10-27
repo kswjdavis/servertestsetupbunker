@@ -14,6 +14,15 @@ from .device import (
     DeviceProvisionResponse,
     DeviceResponse,
 )
+from .system_health import (
+    DatabaseStatus,
+    HealthAlert,
+    OverallStatus,
+    ServiceState,
+    SystemHealthSummary,
+    WeatherConditions,
+    WeatherServiceStatus,
+)
 from .weather import WeatherData
 
 __all__ = [
@@ -31,4 +40,11 @@ __all__ = [
     "DeviceListResponse",
     "ShutdownDecision",
     "WeatherData",
+    "DatabaseStatus",
+    "HealthAlert",
+    "OverallStatus",
+    "ServiceState",
+    "SystemHealthSummary",
+    "WeatherConditions",
+    "WeatherServiceStatus",
 ]

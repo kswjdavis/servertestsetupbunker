@@ -1,95 +1,140 @@
 #!/usr/bin/env bash
 #
-# Deploy FastAPI Backend to DigitalOcean
-# Run this as the bunkercolab user after setup-droplet.sh
+# Deploy the FastAPI backend on the production droplet.
+# Run as the bunkercolab user after the repository has been cloned.
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SERVER_DIR="$PROJECT_ROOT/server"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SERVER_DIR="${PROJECT_ROOT}/server"
+VENV_DIR="${SERVER_DIR}/venv"
+ENV_FILE="${SERVER_DIR}/.env.production"
+SERVICE_NAME="bunkercolab"
+SYSTEMD_TEMPLATE="${PROJECT_ROOT}/config/bunkercolab.service"
+
+log() {
+  printf '[%(%Y-%m-%d %H:%M:%S)T] %s\n' -1 "$*"
+}
+
+ensure_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "ERROR: Required command '$1' is not installed." >&2
+    exit 1
+  fi
+}
+
+usage() {
+  cat <<'USAGE'
+Deploy the FastAPI backend.
+
+Usage: ./deploy-server.sh [--skip-git]
+
+Options:
+  --skip-git   Skip fetching the latest code from git
+  -h, --help   Show this help message
+USAGE
+}
+
+SKIP_GIT=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-git)
+      SKIP_GIT=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 echo "=== Bunkercolab Backend Deployment ==="
-echo "Project root: $PROJECT_ROOT"
+echo "Project root: ${PROJECT_ROOT}"
 echo
 
-# Check if running as bunkercolab user
 if [[ "$(whoami)" != "bunkercolab" ]]; then
-    echo "WARNING: This script should be run as the bunkercolab user"
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
+  echo "WARNING: Recommended to run as the bunkercolab user."
+  read -r -p "Continue anyway? (y/N) " reply
+  if [[ ! "${reply}" =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
 fi
 
-# Setup Python virtual environment
-echo "[1/5] Setting up Python virtual environment..."
-cd "$SERVER_DIR"
+ensure_command python3
+ensure_command git
+ensure_command sudo
 
-if [[ ! -d "venv" ]]; then
-    python3 -m venv venv
+if [[ ! -d "${SERVER_DIR}" ]]; then
+  echo "ERROR: Server directory not found at ${SERVER_DIR}" >&2
+  exit 1
 fi
 
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Configure environment
-echo "[2/5] Configuring environment..."
-if [[ ! -f ".env" ]]; then
-    cp .env.example .env
-    echo "CREATED: .env file from .env.example"
-    echo "WARNING: You must edit .env with production settings!"
-    echo "  - DATABASE_URL (update password)"
-    echo "  - SECRET_KEY (generate secure key)"
-    echo "  - CORS_ORIGINS (your domain)"
-    read -p "Press Enter to continue after editing .env..."
-fi
-
-# Run database migrations
-echo "[3/5] Running database migrations..."
-if [[ -d "alembic" ]]; then
-    alembic upgrade head
+if [[ ${SKIP_GIT} -eq 0 && -d "${PROJECT_ROOT}/.git" ]]; then
+  log "Updating repository..."
+  if ! git -C "${PROJECT_ROOT}" pull --ff-only; then
+    log "WARNING: git pull failed. Continuing with existing code."
+  fi
 else
-    echo "WARNING: Alembic not initialized yet. Skipping migrations."
+  log "Skipping git update."
 fi
 
-# Setup systemd service
-echo "[4/5] Setting up systemd service..."
-sudo tee /etc/systemd/system/bunkercolab.service > /dev/null <<EOF
-[Unit]
-Description=Bunker Colab FastAPI Application
-After=network.target postgresql.service
-Wants=postgresql.service
+log "Ensuring Python virtual environment..."
+cd "${SERVER_DIR}"
+if [[ ! -d "${VENV_DIR}" ]]; then
+  python3 -m venv "${VENV_DIR}"
+fi
 
-[Service]
-Type=simple
-User=bunkercolab
-Group=bunkercolab
-WorkingDirectory=$SERVER_DIR
-Environment="PATH=$SERVER_DIR/venv/bin"
-EnvironmentFile=$SERVER_DIR/.env
-ExecStart=$SERVER_DIR/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
-Restart=always
-RestartSec=10
+"${VENV_DIR}/bin/python" -m pip install --upgrade pip
+"${VENV_DIR}/bin/pip" install -r requirements.txt
 
-[Install]
-WantedBy=multi-user.target
-EOF
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "ERROR: ${ENV_FILE} not found. Create it from server/.env.production.example." >&2
+  exit 1
+fi
 
-sudo systemctl daemon-reload
-sudo systemctl enable bunkercolab
-sudo systemctl restart bunkercolab
+log "Applying database migrations..."
+set +u
+set -o allexport
+source "${ENV_FILE}"
+set +o allexport
+set -u
 
-# Check service status
-echo "[5/5] Checking service status..."
+if [[ -d "${SERVER_DIR}/alembic" ]]; then
+  "${VENV_DIR}/bin/alembic" upgrade head
+else
+  log "WARNING: Alembic directory missing; skipping migrations."
+fi
+
+if [[ -f "${SYSTEMD_TEMPLATE}" ]]; then
+  log "Installing systemd service (${SERVICE_NAME})..."
+  sed \
+    -e "s#__PROJECT_ROOT__#${PROJECT_ROOT}#g" \
+    -e "s#__DEPLOY_USER__#$(whoami)#g" \
+    "${SYSTEMD_TEMPLATE}" | sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null
+  sudo systemctl daemon-reload
+  sudo systemctl enable "${SERVICE_NAME}" >/dev/null 2>&1 || true
+  sudo systemctl restart "${SERVICE_NAME}"
+else
+  log "Systemd template not found at ${SYSTEMD_TEMPLATE}. Skipping unit installation."
+fi
+
+log "Deployment complete. Checking service status..."
 sleep 2
-sudo systemctl status bunkercolab --no-pager || true
+sudo systemctl status "${SERVICE_NAME}" --no-pager || true
 
 echo
-echo "=== Backend Deployment Complete ==="
-echo "Service status: sudo systemctl status bunkercolab"
-echo "View logs: sudo journalctl -u bunkercolab -f"
-echo "Test API: curl http://localhost:8000/healthz"
+echo "=== Deployment Summary ==="
+echo "- Backend directory: ${SERVER_DIR}"
+echo "- Environment file : ${ENV_FILE}"
+echo "- Service name     : ${SERVICE_NAME}"
+echo
+echo "Logs: sudo journalctl -u ${SERVICE_NAME} -f"
+echo "Health check: curl http://localhost:8000/healthz"
 echo
