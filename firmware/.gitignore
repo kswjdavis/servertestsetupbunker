@@ -25,3 +25,10 @@ Thumbs.db
 # Flash Download Tool
 flash_project_args.json
 firmware/main.backup/
+
+# Test executables and object files
+tests/*.o
+tests/test_*
+!tests/test_*.c
+!tests/test_*.h
+tests/*_support.o
