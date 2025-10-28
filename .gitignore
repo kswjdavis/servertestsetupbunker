@@ -17,6 +17,7 @@ node_modules/
 dist/
 build/
 .vite/
+*.tsbuildinfo
 
 # Python virtual environments (catch at any depth)
 **/.venv/
