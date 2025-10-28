@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  test-droplet:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: bunkercolab-test-droplet
+    volumes:
+      # Mount the project directory as if it were cloned
+      - ../..:/home/bunkercolab/Bunkercolab:rw
+    ports:
+      - "9000:8000"  # FastAPI (test on 9000 to avoid conflict)
+      - "9080:80"    # Nginx (test on 9080)
+    environment:
+      - TERM=xterm-256color
+    stdin_open: true
+    tty: true
+    privileged: true  # Needed for systemctl
+    command: /bin/bash -c "service postgresql start && /bin/bash"
