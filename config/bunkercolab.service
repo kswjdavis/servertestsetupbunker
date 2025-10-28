@@ -16,5 +16,17 @@ Restart=always
 RestartSec=5
 TimeoutStopSec=30
 
+# Security hardening (balanced for Python venv compatibility)
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=__PROJECT_ROOT__/server
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+
 [Install]
 WantedBy=multi-user.target

@@ -58,9 +58,15 @@ firmware/sdkconfig.old
 firmware/nvs_provision.csv
 firmware/nvs_partition.bin
 firmware/provision_nvs.sh
+firmware/nvs_*.bin
+firmware/nvs_*.csv
 
 # macOS / IDE cruft
 .DS_Store
+
+# Python package directories (installed dependencies)
+python_multipart/
+**/site-packages/
 
 # Keep BMAD core config, agents, tasks, templates tracked
 # !.bmad-core/
