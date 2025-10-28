@@ -8,6 +8,7 @@ python-jose[cryptography]
 passlib[bcrypt]
 bcrypt==4.1.2
 httpx
+python-multipart
 alembic
 pytest>=7.0.0
 pytest-asyncio
