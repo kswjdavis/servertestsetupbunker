@@ -1,0 +1,49 @@
+{
+  "raspberryPi": {
+    "host": "192.168.1.187",
+    "user": "bunker",
+    "sshKeyPath": "~/.ssh/id_rsa",
+    "dbPath": "/var/log/bunker/bunker_monitor.db",
+    "logPath": "/var/log/bunker/",
+    "serialLogPattern": "esp32-serial-*.jsonl"
+  },
+  "esp32": {
+    "macAddress": "XX:XX:XX:XX:XX:XX",
+    "expectedFirmwareVersion": "1.0.0",
+    "gpioRelay": 4,
+    "gpioLed": 5,
+    "serialBaudRate": 115200
+  },
+  "backend": {
+    "apiUrl": "http://localhost:8000",
+    "healthEndpoint": "/healthz",
+    "apiPrefix": "/api/v1"
+  },
+  "docker": {
+    "serviceName": "bunkercolab-backend-1",
+    "composeFile": "../docker-compose.yml"
+  },
+  "testSettings": {
+    "statusReportInterval": 60,
+    "deadmanTimerDuration": 300,
+    "relayResponseTimeout": 60,
+    "maxWaitForGpioEvent": 65,
+    "evidenceDir": "./test-evidence",
+    "screenshotDir": "./screenshots"
+  },
+  "testCredentials": {
+    "username": "e2e_test_user",
+    "password": "TestPass123!",
+    "email": "e2e@test.local"
+  },
+  "testDevice": {
+    "name": "E2E Test Bunker",
+    "latitude": 37.979,
+    "longitude": -101.446,
+    "orientation": 180,
+    "fanCount": 6,
+    "windThreshold": 15,
+    "electricityCostKwh": 0.12,
+    "fanPowerWatts": 750
+  }
+}

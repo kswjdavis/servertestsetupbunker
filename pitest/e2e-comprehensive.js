@@ -404,7 +404,10 @@ async function runTests() {
     try {
       // Use page.evaluate to fetch from within the browser context (has auth)
       const bunkerData = await page.evaluate(async () => {
-        const response = await fetch('/api/v1/bunkers');
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/bunkers', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         return response.json();
       });
 
@@ -438,11 +441,13 @@ async function runTests() {
     // ========== TEST 13: Create Time Window Override (Story 4.6) ==========
     console.log('📋 Test 13: Create Time Window Override');
     try {
-      const overrideResult = await page.evaluate(async (apiUrl) => {
-        const response = await fetch(`${apiUrl}/api/v1/overrides`, {
+      const overrideResult = await page.evaluate(async () => {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/v1/overrides', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             start_time: new Date(Date.now() + 3600000).toISOString(),
@@ -459,7 +464,7 @@ async function runTests() {
         } else {
           return { success: false, status: response.status };
         }
-      }, API_URL);
+      });
 
       if (overrideResult.success) {
         console.log(`✅ PASS: Time window override created (ID: ${overrideResult.id})\n`);
@@ -476,9 +481,9 @@ async function runTests() {
     // ========== TEST 14: List and Delete Override (Story 4.6) ==========
     console.log('📋 Test 14: List and Delete Override');
     try {
-      const deleteResult = await page.evaluate(async (apiUrl) => {
+      const deleteResult = await page.evaluate(async () => {
         // List overrides
-        const listResponse = await fetch(`${apiUrl}/api/v1/overrides`);
+        const listResponse = await fetch('/api/v1/overrides');
 
         if (!listResponse.ok) {
           return { success: false, status: listResponse.status, stage: 'list' };
@@ -488,7 +493,7 @@ async function runTests() {
 
         // Delete the test override if it exists
         if (window.testOverrideId) {
-          const deleteResponse = await fetch(`${apiUrl}/api/v1/overrides/${window.testOverrideId}`, {
+          const deleteResponse = await fetch(`/api/v1/overrides/${window.testOverrideId}`, {
             method: 'DELETE'
           });
 
@@ -500,7 +505,7 @@ async function runTests() {
         } else {
           return { success: true, overrideCount: overrides.length, deleted: false };
         }
-      }, API_URL);
+      });
 
       if (deleteResult.success) {
         console.log(`Found ${deleteResult.overrideCount} override(s)`);
