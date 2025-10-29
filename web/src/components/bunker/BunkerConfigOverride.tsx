@@ -100,9 +100,15 @@ export default function BunkerConfigOverride({
     setSaving(true);
     try {
       const updateData = {
-        ...bunker,
-        wind_threshold: useCustomWindThreshold ? windThreshold : globalConfig.default_wind_threshold_mph,
-        electricity_cost_kwh: useCustomElectricityCost ? electricityCost : globalConfig.default_electricity_cost_kwh
+        name: bunker.name,
+        latitude: bunker.latitude,
+        longitude: bunker.longitude,
+        orientation_degrees: bunker.orientation,
+        fan_count: bunker.fan_count,
+        wind_threshold_mph: useCustomWindThreshold ? windThreshold : globalConfig.default_wind_threshold_mph,
+        electricity_cost_kwh: useCustomElectricityCost ? electricityCost : globalConfig.default_electricity_cost_kwh,
+        fan_power_watts: bunker.fan_power_watts,
+        is_active: bunker.is_active
       };
 
       const updated = await bunkerService.updateBunker(bunker.id, updateData);

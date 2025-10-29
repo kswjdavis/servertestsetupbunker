@@ -5,9 +5,9 @@ export interface BunkerCreateRequest {
   name: string;
   latitude: number;
   longitude: number;
-  orientation: number;
+  orientation_degrees: number;
   fan_count: number;
-  wind_threshold: number;
+  wind_threshold_mph: number;
   electricity_cost_kwh?: number;
   fan_power_watts?: number;
 }

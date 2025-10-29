@@ -26,9 +26,9 @@ export default function BunkerForm({
     name: bunker?.name || '',
     latitude: bunker?.latitude || 37.979,
     longitude: bunker?.longitude || -101.446,
-    orientation: bunker?.orientation || 0,
+    orientation_degrees: bunker?.orientation || 0,
     fan_count: bunker?.fan_count || 3,
-    wind_threshold: bunker?.wind_threshold || 20,
+    wind_threshold_mph: bunker?.wind_threshold || 20,
     electricity_cost_kwh: bunker?.electricity_cost_kwh || 0.12,
     fan_power_watts: bunker?.fan_power_watts || 5000,
     is_active: bunker?.is_active !== undefined ? bunker.is_active : true
@@ -113,8 +113,8 @@ export default function BunkerForm({
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Orientation</h3>
         <OrientationSelector
-          value={formData.orientation}
-          onChange={(orientation) => setFormData(prev => ({ ...prev, orientation }))}
+          value={formData.orientation_degrees}
+          onChange={(orientation_degrees) => setFormData(prev => ({ ...prev, orientation_degrees }))}
         />
       </div>
 
@@ -141,17 +141,17 @@ export default function BunkerForm({
           </div>
 
           <div>
-            <label htmlFor="wind_threshold" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="wind_threshold_mph" className="block text-sm font-medium text-gray-700 mb-1">
               Wind Threshold (mph) *
             </label>
             <input
               type="number"
-              id="wind_threshold"
+              id="wind_threshold_mph"
               required
               min="5"
               max="50"
-              value={formData.wind_threshold}
-              onChange={(e) => setFormData(prev => ({ ...prev, wind_threshold: parseInt(e.target.value) || 20 }))}
+              value={formData.wind_threshold_mph}
+              onChange={(e) => setFormData(prev => ({ ...prev, wind_threshold_mph: parseInt(e.target.value) || 20 }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
             <p className="text-xs text-gray-500 mt-1">Fans turn ON when wind ≥ threshold</p>

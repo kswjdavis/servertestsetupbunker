@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/Users/jeffdavis/AmericanAgrionics/Bunkercolab/pitest/logs/.66cdd2c6706b60f5d5a91c9968b2bf0c314b8026-audit.json",
+    "files": [
+        {
+            "date": 1761747406450,
+            "name": "/Users/jeffdavis/AmericanAgrionics/Bunkercolab/pitest/logs/mcp-puppeteer-2025-10-29.log",
+            "hash": "8e990a465ef2865bca3db7a88054c0c2406fae64f42f3c6408c0abaf75fc761f"
+        }
+    ],
+    "hashType": "sha256"
+}

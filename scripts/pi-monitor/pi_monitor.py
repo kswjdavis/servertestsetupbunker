@@ -17,7 +17,7 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -46,7 +46,7 @@ def load_config(path: str) -> dict:
 
 
 def iso_now() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat() + "Z"
 
 
 class DataStore:
@@ -56,7 +56,7 @@ class DataStore:
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA synchronous=NORMAL;")
         self._lock = threading.Lock()
-        self._last_vacuum = datetime.utcnow()
+        self._last_vacuum = datetime.now(timezone.utc)
         self._init_schema()
 
     def _init_schema(self) -> None:
@@ -99,6 +99,45 @@ class DataStore:
                 serial_connected INTEGER NOT NULL,
                 gpio_ok INTEGER NOT NULL,
                 notes TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS esp32_telemetry (
+                id INTEGER PRIMARY KEY,
+                recorded_at TEXT NOT NULL,
+                free_heap_bytes INTEGER,
+                wifi_rssi INTEGER,
+                countdown_timer_remaining INTEGER,
+                uptime_seconds INTEGER
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS esp32_reboots (
+                id INTEGER PRIMARY KEY,
+                detected_at TEXT NOT NULL,
+                reset_reason TEXT,
+                uptime_before_reboot INTEGER,
+                watchdog_reset_count INTEGER,
+                notes TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS network_failures (
+                id INTEGER PRIMARY KEY,
+                failure_at TEXT NOT NULL,
+                failure_type TEXT NOT NULL,
+                error_message TEXT,
+                tag TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS relay_operations (
+                id INTEGER PRIMARY KEY,
+                state_change_at TEXT NOT NULL,
+                new_state INTEGER NOT NULL,
+                triggered_by TEXT,
+                notes TEXT,
+                duration_seconds INTEGER
             )
             """,
         ]
@@ -150,10 +189,92 @@ class DataStore:
             )
             self._conn.commit()
 
+    def record_telemetry(self, recorded_at: str, free_heap: Optional[int],
+                         wifi_rssi: Optional[int], countdown_timer: Optional[int],
+                         uptime: Optional[int]) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO esp32_telemetry (recorded_at, free_heap_bytes, wifi_rssi, "
+                "countdown_timer_remaining, uptime_seconds) VALUES (?, ?, ?, ?, ?)",
+                (recorded_at, free_heap, wifi_rssi, countdown_timer, uptime),
+            )
+            self._conn.commit()
+
+    def record_reboot(self, detected_at: str, reset_reason: Optional[str],
+                      uptime_before: Optional[int], watchdog_count: Optional[int],
+                      notes: str = "") -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO esp32_reboots (detected_at, reset_reason, uptime_before_reboot, "
+                "watchdog_reset_count, notes) VALUES (?, ?, ?, ?, ?)",
+                (detected_at, reset_reason, uptime_before, watchdog_count, notes or None),
+            )
+            self._conn.commit()
+
+    def record_network_failure(self, failure_at: str, failure_type: str,
+                                error_message: str, tag: Optional[str] = None) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO network_failures (failure_at, failure_type, error_message, tag) "
+                "VALUES (?, ?, ?, ?)",
+                (failure_at, failure_type, error_message, tag),
+            )
+            self._conn.commit()
+
+    def record_relay_operation(self, state_change_at: str, new_state: int,
+                                triggered_by: Optional[str] = None, notes: str = "") -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO relay_operations (state_change_at, new_state, triggered_by, notes) "
+                "VALUES (?, ?, ?, ?)",
+                (state_change_at, new_state, triggered_by, notes or None),
+            )
+            self._conn.commit()
+
+    def get_last_relay_state(self) -> Optional[int]:
+        """Get the last recorded relay state to detect actual changes."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT new_state FROM relay_operations "
+                "ORDER BY state_change_at DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
+    def get_last_relay_change_time(self) -> Optional[str]:
+        """Get the timestamp of the last relay state change."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT state_change_at FROM relay_operations "
+                "ORDER BY state_change_at DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
+    def update_last_relay_duration(self, duration_seconds: int) -> None:
+        """Update the duration of the last relay state."""
+        with self._lock:
+            self._conn.execute(
+                "UPDATE relay_operations SET duration_seconds = ? "
+                "WHERE id = (SELECT id FROM relay_operations ORDER BY state_change_at DESC LIMIT 1)",
+                (duration_seconds,)
+            )
+            self._conn.commit()
+
+    def get_last_uptime(self) -> Optional[int]:
+        """Get the last recorded uptime value for reboot detection."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT uptime_seconds FROM esp32_telemetry "
+                "ORDER BY recorded_at DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
     def vacuum_if_needed(self, interval_days: int) -> None:
         if interval_days <= 0:
             return
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if now - self._last_vacuum < timedelta(days=interval_days):
             return
         with self._lock:
@@ -212,7 +333,7 @@ class RawSerialLogger:
             self._force_rotate = False
 
     def write(self, record: dict) -> None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         with self._lock:
             self._open_if_needed(now)
             if self._file:
@@ -256,6 +377,7 @@ class SerialWorker(threading.Thread):
         self._stop_event = stop_event
         self._serial = None
         self._connected = threading.Event()
+        self._last_uptime = None
 
     def is_connected(self) -> bool:
         return self._connected.is_set()
@@ -286,6 +408,80 @@ class SerialWorker(threading.Thread):
         self._serial = None
         self._connected.clear()
 
+    def _parse_enhanced_metrics(self, recorded_at: str, level: Optional[str],
+                                 tag: Optional[str], message: Optional[str]) -> None:
+        """Parse and record enhanced metrics for long-term monitoring."""
+        if not tag or not message:
+            return
+
+        try:
+            # Parse heap memory (from main component status reports)
+            if tag == "main" and "Free heap:" in message:
+                parts = message.split("Free heap:")
+                if len(parts) > 1:
+                    heap_str = parts[1].strip().split()[0]
+                    free_heap = int(heap_str)
+                    # Store in telemetry (other fields will be NULL for now)
+                    self._datastore.record_telemetry(recorded_at, free_heap, None, None, None)
+
+            # Detect reboots via boot messages or watchdog reset count
+            elif tag == "boot" and "ESP-IDF" in message:
+                # ESP32 just booted
+                last_uptime = self._last_uptime
+                self._last_uptime = None  # Reset tracking
+                self._datastore.record_reboot(
+                    recorded_at, "normal_boot", last_uptime, None,
+                    notes="ESP-IDF startup detected"
+                )
+
+            elif tag == "watchdog_manager" and "Watchdog reset count:" in message:
+                # Extract reset count
+                parts = message.split("Watchdog reset count:")
+                if len(parts) > 1:
+                    count_str = parts[1].strip()
+                    reset_count = int(count_str)
+                    if reset_count > 0:
+                        self._datastore.record_reboot(
+                            recorded_at, "watchdog_reset", None, reset_count,
+                            notes=f"Watchdog triggered {reset_count} times"
+                        )
+
+            # Track network failures (HTTP/TLS errors)
+            elif level == "E" and tag in ("esp-tls", "HTTP_CLIENT", "http_client",
+                                           "transport_base", "esp_https_ota"):
+                self._datastore.record_network_failure(
+                    recorded_at, "http_error", message, tag
+                )
+
+            # Track relay operations (only log actual state changes)
+            elif tag == "relay_controller" and ("Relay: ON" in message or "Relay: OFF" in message):
+                new_state = 1 if "ON" in message else 0
+                last_state = self._datastore.get_last_relay_state()
+
+                # Only record if state actually changed
+                if last_state is None or last_state != new_state:
+                    # Calculate duration of previous state
+                    if last_state is not None:
+                        last_change_time = self._datastore.get_last_relay_change_time()
+                        if last_change_time:
+                            try:
+                                from datetime import datetime
+                                last_dt = datetime.fromisoformat(last_change_time.replace('Z', '+00:00'))
+                                current_dt = datetime.fromisoformat(recorded_at.replace('Z', '+00:00'))
+                                duration = int((current_dt - last_dt).total_seconds())
+                                self._datastore.update_last_relay_duration(duration)
+                            except (ValueError, AttributeError):
+                                pass  # Couldn't calculate duration
+
+                    triggered_by = "server_command"  # Assume server command unless we detect otherwise
+                    if "fail-safe" in message.lower() or "forced" in message.lower() or "locked" in message.lower():
+                        triggered_by = "fail_safe"
+                    self._datastore.record_relay_operation(recorded_at, new_state, triggered_by, message)
+
+        except (ValueError, IndexError) as exc:
+            # Parsing error - log but don't crash
+            logging.debug("Failed to parse enhanced metrics from %s: %s", message, exc)
+
     def run(self) -> None:
         backoff = max(1, int(self._cfg.get("reconnect_interval_seconds", 5)))
         while not self._stop_event.is_set():
@@ -311,6 +507,8 @@ class SerialWorker(threading.Thread):
                     "msg": message,
                     "line": decoded,
                 })
+                # Enhanced parsing for long-term monitoring
+                self._parse_enhanced_metrics(recorded_at, level, tag, message)
             except SerialException as exc:
                 logging.error("Serial exception: %s", exc)
                 self._disconnect()

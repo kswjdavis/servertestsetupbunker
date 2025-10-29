@@ -1,0 +1,14 @@
+{
+  "name": "bunkercolab-e2e-tests",
+  "version": "1.0.0",
+  "description": "E2E tests for Bunkercolab using Puppeteer",
+  "main": "e2e-test.js",
+  "scripts": {
+    "test": "node e2e-test.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.6.0"
+  },
+  "author": "Jeff Davis + Sarah (PO)",
+  "license": "MIT"
+}

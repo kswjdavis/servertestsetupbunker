@@ -67,16 +67,53 @@ export default function MapLocationPicker({
         </MapContainer>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-        <div className="bg-gray-50 p-2 rounded">
-          <span className="text-gray-600">Lat:</span>
-          <span className="ml-1 font-mono">{latitude.toFixed(6)}</span>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="latitude" className="block text-xs font-medium text-gray-700 mb-1">
+            Latitude
+          </label>
+          <input
+            type="number"
+            id="latitude"
+            step="0.000001"
+            min="-90"
+            max="90"
+            value={latitude}
+            onChange={(e) => {
+              const lat = parseFloat(e.target.value);
+              if (!isNaN(lat) && lat >= -90 && lat <= 90) {
+                onLocationChange(lat, longitude);
+              }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+            placeholder="e.g., 41.8781"
+          />
         </div>
-        <div className="bg-gray-50 p-2 rounded">
-          <span className="text-gray-600">Lng:</span>
-          <span className="ml-1 font-mono">{longitude.toFixed(6)}</span>
+        <div>
+          <label htmlFor="longitude" className="block text-xs font-medium text-gray-700 mb-1">
+            Longitude
+          </label>
+          <input
+            type="number"
+            id="longitude"
+            step="0.000001"
+            min="-180"
+            max="180"
+            value={longitude}
+            onChange={(e) => {
+              const lng = parseFloat(e.target.value);
+              if (!isNaN(lng) && lng >= -180 && lng <= 180) {
+                onLocationChange(latitude, lng);
+              }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+            placeholder="e.g., -87.6298"
+          />
         </div>
       </div>
+      <p className="text-xs text-gray-500 mt-2">
+        Click on the map or enter coordinates manually
+      </p>
     </div>
   );
 }
