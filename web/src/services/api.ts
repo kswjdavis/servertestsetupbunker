@@ -1,6 +1,9 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Use relative URL if VITE_API_URL is empty (for Docker/nginx proxy)
+// Otherwise use the configured URL or fallback to localhost
+const envApiUrl = import.meta.env.VITE_API_URL;
+const API_URL = envApiUrl === '' ? '' : (envApiUrl || 'http://localhost:8000');
 
 const api = axios.create({
   baseURL: API_URL,

@@ -113,7 +113,7 @@ export default function WindIndicator({ bunker, className }: WindIndicatorProps)
           <div>
             <span className="text-gray-600">Relative:</span>
             <span className="ml-2 font-medium text-gray-900">
-              {relativeWindDegrees.toFixed(0)}°
+              {relativeWindDegrees?.toFixed(0) ?? 'N/A'}°
             </span>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function WindIndicator({ bunker, className }: WindIndicatorProps)
             <div>
               <span className="text-gray-600">Temperature:</span>
               <span className="ml-2 font-medium text-gray-900">
-                {weather.temperature.toFixed(1)}°F
+                {weather.temperature?.toFixed(1) ?? 'N/A'}°F
               </span>
             </div>
           )}

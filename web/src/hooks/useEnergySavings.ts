@@ -21,7 +21,7 @@ export function useEnergySavings(bunkerId?: string, pollInterval: number = 10000
         setData(savings);
         setError(null);
       } catch (err) {
-        console.error('Failed to fetch energy savings:', err);
+        console.error('Failed to fetch energy savings:', err instanceof Error ? err.message : String(err));
         // Use mock data as fallback
         if (bunkerId) {
           const mockSavings = mockEnergySavings[bunkerId as keyof typeof mockEnergySavings];

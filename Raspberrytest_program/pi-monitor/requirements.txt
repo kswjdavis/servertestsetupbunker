@@ -1,0 +1,4 @@
+pyserial==3.5
+gpiozero==2.0.1
+psutil>=5.9.0
+PyYAML>=6.0

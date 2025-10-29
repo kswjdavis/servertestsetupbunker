@@ -17,6 +17,7 @@ from app.schemas.device import (
     DeviceProvisionRequest,
     DeviceProvisionResponse,
     DeviceResponse,
+    DeviceWithBunkerInfo,
 )
 
 router = APIRouter(prefix="/devices", tags=["devices"])
@@ -65,12 +66,26 @@ async def list_devices(
     _: AdminUser,
     session: AsyncSession = Depends(get_db),
 ) -> DeviceListResponse:
-    """List all provisioned devices (auth token excluded)."""
+    """List all provisioned devices with bunker information."""
     repository = DeviceRepository(session)
-    devices = await repository.list_devices()
-    return DeviceListResponse(
-        devices=[DeviceResponse.model_validate(device) for device in devices]
-    )
+    device_bunker_tuples = await repository.list_devices()
+
+    devices_with_bunker_info = []
+    for device, bunker in device_bunker_tuples:
+        device_dict = {
+            "id": device.id,
+            "bunker_id": device.bunker_id,
+            "bunker_name": bunker.name,
+            "fan_position": device.fan_position,
+            "mac_address": device.mac_address,
+            "firmware_version": device.firmware_version,
+            "last_seen": device.last_seen,
+            "provisioned_at": device.provisioned_at,
+            "led_flash_sequence": device.led_flash_sequence,
+        }
+        devices_with_bunker_info.append(DeviceWithBunkerInfo(**device_dict))
+
+    return DeviceListResponse(devices=devices_with_bunker_info)
 
 
 @router.get(

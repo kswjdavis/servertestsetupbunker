@@ -7,13 +7,17 @@ interface WindArrowProps {
 }
 
 export default function WindArrow({ degrees, speed, className }: WindArrowProps) {
+  // Handle undefined/null/NaN values
+  const safeDegrees = degrees !== undefined && degrees !== null && !isNaN(degrees) ? degrees : 0;
+  const safeSpeed = speed !== undefined && speed !== null && !isNaN(speed) ? speed : 0;
+
   // Arrow length based on wind speed (longer arrow = stronger wind)
   const minLength = 40;
   const maxLength = 80;
-  const arrowLength = Math.min(minLength + speed * 1.5, maxLength);
+  const arrowLength = Math.min(minLength + safeSpeed * 1.5, maxLength);
 
   // Animation speed based on wind speed
-  const animationDuration = Math.max(2, 10 - speed / 5);
+  const animationDuration = Math.max(2, 10 - safeSpeed / 5);
 
   return (
     <div className={`absolute inset-0 flex items-center justify-center pointer-events-none ${className}`}>
@@ -23,7 +27,7 @@ export default function WindArrow({ degrees, speed, className }: WindArrowProps)
         viewBox="0 0 200 200"
         className="w-full h-full"
         style={{
-          transform: `rotate(${degrees}deg)`,
+          transform: `rotate(${safeDegrees}deg)`,
           transition: 'transform 0.5s ease-in-out'
         }}
       >

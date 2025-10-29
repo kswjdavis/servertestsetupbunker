@@ -1,8 +1,9 @@
 # Dockerfile for Puppeteer E2E testing
 FROM node:18-slim
 
-# Install dependencies for Chromium (Puppeteer's bundled browser)
+# Install Chromium browser natively for ARM64 compatibility
 RUN apt-get update && apt-get install -y \
+    chromium \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
@@ -42,12 +43,16 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Skip Puppeteer's Chromium download, use system Chromium instead
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install Node dependencies (Puppeteer will download Chromium automatically)
+# Install Node dependencies (Puppeteer will NOT download Chromium)
 RUN npm install
 
 # Copy test scripts

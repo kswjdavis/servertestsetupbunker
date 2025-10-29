@@ -26,7 +26,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught error:', error, errorInfo);
+    console.error('ErrorBoundary caught error:', error.message, '\nStack:', error.stack, '\nComponent Stack:', errorInfo.componentStack);
     this.setState({ errorInfo });
 
     // TODO: Send to error tracking service in production

@@ -1,0 +1,35 @@
+# Default configuration template for pi_monitor.py
+# Copy to /etc/bunker-monitor.yaml and adjust paths/pins as needed.
+
+serial:
+  device_glob: "/dev/serial/by-id/*ESP32*"
+  baud_rate: 115200
+  reconnect_interval_seconds: 5
+
+logging:
+  log_dir: "/var/log/bunker"
+  raw_serial_prefix: "esp32-serial"
+  sqlite_path: "/var/log/bunker/bunker_monitor.db"
+  max_raw_file_mb: 50
+
+gpio:
+  relay_pin: 17           # Pi BCM numbering
+  led_pin: 27
+  debounce_ms: 20
+
+system_metrics:
+  sample_interval_seconds: 60
+  wifi_interface: "wlan0"
+  low_disk_mb_warning: 512
+
+heartbeat:
+  interval_seconds: 60
+
+retention:
+  raw_days: 14
+  vacuum_interval_days: 1
+
+notes: >
+  Update the wifi_interface if the Pi uses a different device name
+  (e.g., wlan1). Ensure the bunker-monitor user can read the serial
+  device (group dialout) and access the configured log directory.

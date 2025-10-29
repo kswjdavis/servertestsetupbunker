@@ -12,8 +12,8 @@ export const fetchBunkers = async (): Promise<Bunker[]> => {
 };
 
 export const listDevices = async (): Promise<DeviceWithBunkerInfo[]> => {
-  const response = await api.get<DeviceWithBunkerInfo[]>('/api/v1/devices');
-  return response.data;
+  const response = await api.get<{devices: DeviceWithBunkerInfo[]}>('/api/v1/devices');
+  return response.data.devices;
 };
 
 export const deleteDevice = async (deviceId: string): Promise<void> => {

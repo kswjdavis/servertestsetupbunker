@@ -6,6 +6,9 @@ interface CompassRoseProps {
 }
 
 export default function CompassRose({ orientation, className }: CompassRoseProps) {
+  // Handle undefined/null/NaN values
+  const safeOrientation = orientation !== undefined && orientation !== null && !isNaN(orientation) ? orientation : 0;
+
   return (
     <div className={`relative ${className}`}>
       <svg width="200" height="200" viewBox="0 0 200 200" className="w-full h-full">
@@ -109,7 +112,7 @@ export default function CompassRose({ orientation, className }: CompassRoseProps
 
         {/* Bunker orientation indicator */}
         <g
-          transform={`rotate(${orientation} 100 100)`}
+          transform={`rotate(${safeOrientation} 100 100)`}
           className="text-orange-600"
         >
           {/* Bunker rectangle */}

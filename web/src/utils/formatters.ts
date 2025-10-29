@@ -4,6 +4,10 @@
  * @returns Formatted string (e.g., "$1,234.56")
  */
 export function formatCurrency(amount: number): string {
+  // Handle undefined/null/NaN
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    return '$0.00';
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -18,6 +22,11 @@ export function formatCurrency(amount: number): string {
  * @returns Formatted string (e.g., "24h 30m", "5d 3h", "45m")
  */
 export function formatDuration(seconds: number): string {
+  // Handle undefined/null/NaN
+  if (seconds === undefined || seconds === null || isNaN(seconds)) {
+    return '0s';
+  }
+
   if (seconds < 60) return `${Math.floor(seconds)}s`;
 
   const minutes = Math.floor(seconds / 60);
@@ -52,6 +61,11 @@ export function formatDuration(seconds: number): string {
  * @returns Formatted string (e.g., "123.5 kWh", "1,234 kWh")
  */
 export function formatEnergy(kwh: number): string {
+  // Handle undefined/null/NaN
+  if (kwh === undefined || kwh === null || isNaN(kwh)) {
+    return '0.00 kWh';
+  }
+
   if (kwh < 10) {
     return `${kwh.toFixed(2)} kWh`;
   } else if (kwh < 100) {
@@ -71,6 +85,10 @@ export function formatEnergy(kwh: number): string {
  * @returns Formatted string (e.g., "12.5%")
  */
 export function formatPercentage(value: number, decimals: number = 1): string {
+  // Handle undefined/null/NaN
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0%';
+  }
   return `${value.toFixed(decimals)}%`;
 }
 
@@ -80,6 +98,11 @@ export function formatPercentage(value: number, decimals: number = 1): string {
  * @returns Formatted string (e.g., "1.2K", "3.5M")
  */
 export function formatLargeNumber(num: number): string {
+  // Handle undefined/null/NaN
+  if (num === undefined || num === null || isNaN(num)) {
+    return '0';
+  }
+
   if (num < 1000) return num.toString();
   if (num < 1000000) return `${(num / 1000).toFixed(1)}K`;
   if (num < 1000000000) return `${(num / 1000000).toFixed(1)}M`;

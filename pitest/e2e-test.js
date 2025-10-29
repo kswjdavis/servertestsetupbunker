@@ -10,6 +10,7 @@ async function runTests() {
 
   const browser = await puppeteer.launch({
     headless: 'new',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -19,6 +20,9 @@ async function runTests() {
   });
 
   const page = await browser.newPage();
+
+  // Clear browser cache to ensure fresh page load
+  await page.setCacheEnabled(false);
 
   // Capture console logs and errors
   page.on('console', msg => {
@@ -97,7 +101,7 @@ async function runTests() {
       return {
         hasMap: !!document.querySelector('[class*="leaflet"]') || !!document.querySelector('[class*="map"]'),
         hasNav: !!document.querySelector('nav') || !!document.querySelector('[class*="nav"]'),
-        hasCreateButton: !!document.querySelector('button[class*="blue"], button:has-text("Create")'),
+        hasCreateButton: !!document.querySelector('button[class*="blue"]') || Array.from(document.querySelectorAll('button')).some(btn => btn.textContent.includes('Create')),
         bodyText: document.body.innerText.substring(0, 200)
       };
     });

@@ -4,7 +4,8 @@
   "description": "E2E tests for Bunkercolab using Puppeteer",
   "main": "e2e-test.js",
   "scripts": {
-    "test": "node e2e-test.js"
+    "test": "node e2e-test.js",
+    "test:comprehensive": "node e2e-comprehensive.js"
   },
   "dependencies": {
     "puppeteer": "^21.6.0"

@@ -1,0 +1,19 @@
+[Unit]
+Description=Bunkercolab ESP32 monitor
+After=network-online.target dev-serial0.device
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bunker
+Group=bunker
+WorkingDirectory=/opt/bunker-monitor
+Environment=PI_MONITOR_CONFIG=/etc/bunker-monitor.yaml
+ExecStart=/opt/bunker-monitor/.venv/bin/python /opt/bunker-monitor/pi_monitor.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

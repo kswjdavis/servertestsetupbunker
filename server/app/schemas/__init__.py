@@ -3,11 +3,14 @@
 from .auth import TokenResponse, UserCreate, UserLogin, UserResponse
 from .bunker import (
     BunkerCreate,
+    BunkerDeviceStatus,
     BunkerListResponse,
     BunkerResponse,
+    BunkerStatusResponse,
     BunkerUpdate,
 )
 from .control import ShutdownDecision
+from .config import GlobalConfigResponse, GlobalConfigUpdate
 from .device import (
     DeviceListResponse,
     DeviceProvisionRequest,
@@ -31,14 +34,18 @@ __all__ = [
     "UserLogin",
     "UserResponse",
     "BunkerCreate",
+    "BunkerDeviceStatus",
     "BunkerUpdate",
     "BunkerResponse",
     "BunkerListResponse",
+    "BunkerStatusResponse",
     "DeviceProvisionRequest",
     "DeviceProvisionResponse",
     "DeviceResponse",
     "DeviceListResponse",
     "ShutdownDecision",
+    "GlobalConfigResponse",
+    "GlobalConfigUpdate",
     "WeatherData",
     "DatabaseStatus",
     "HealthAlert",

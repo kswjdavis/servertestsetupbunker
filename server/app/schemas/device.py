@@ -60,10 +60,35 @@ class DeviceResponse(BaseModel):
         return current_time - self.last_seen <= timedelta(minutes=2)
 
 
+class DeviceWithBunkerInfo(BaseModel):
+    """Device response with bunker information included."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    bunker_id: UUID
+    bunker_name: str
+    fan_position: int
+    mac_address: str
+    firmware_version: str | None = None
+    last_seen: datetime | None = None
+    provisioned_at: datetime
+    led_flash_sequence: int
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def is_online(self) -> bool:
+        """Devices seen within the last two minutes are considered online."""
+        if self.last_seen is None:
+            return False
+        current_time = datetime.now(timezone.utc)
+        return current_time - self.last_seen <= timedelta(minutes=2)
+
+
 class DeviceListResponse(BaseModel):
     """Response model for listing devices."""
 
-    devices: list[DeviceResponse]
+    devices: list[DeviceWithBunkerInfo]
 
 
 class DeviceStatusRequest(BaseModel):

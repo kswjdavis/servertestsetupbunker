@@ -155,12 +155,14 @@ class DeviceRepository(BaseRepository[Device]):
         await self.session.refresh(device)
         return device
 
-    async def list_devices(self) -> list[Device]:
-        """Return all provisioned devices ordered by bunker and fan position."""
+    async def list_devices(self) -> list[tuple[Device, Bunker]]:
+        """Return all provisioned devices with bunker info, ordered by bunker and fan position."""
         result = await self.session.execute(
-            select(Device).order_by(Device.bunker_id, Device.fan_position)
+            select(Device, Bunker)
+            .join(Bunker, Device.bunker_id == Bunker.id)
+            .order_by(Device.bunker_id, Device.fan_position)
         )
-        return list(result.scalars().all())
+        return list(result.all())
 
     async def get_device(self, device_id: UUID) -> Device | None:
         """Retrieve a device by its identifier."""

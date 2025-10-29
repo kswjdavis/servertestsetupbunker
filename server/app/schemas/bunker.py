@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.weather import WeatherData
 
 
 class BunkerBase(BaseModel):
@@ -76,6 +79,75 @@ class BunkerResponse(BunkerBase):
     updated_at: datetime
 
 
+class BunkerDeviceStatus(BaseModel):
+    """Telemetry snapshot for a single device within a bunker."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    device_id: UUID
+    fan_position: int = Field(ge=1, description="Fan position within the bunker (1-based).")
+    mac_address: str = Field(description="Device MAC address in canonical format.")
+    relay_state: Literal["ON", "OFF", "UNKNOWN"] = Field(
+        description="Current relay state reported by the device or UNKNOWN if unavailable."
+    )
+    is_online: bool = Field(description="Derived online status based on last_seen timestamp.")
+    wifi_rssi: int | None = Field(
+        default=None,
+        description="WiFi signal strength in dBm (negative).",
+    )
+    uptime_seconds: int | None = Field(
+        default=None,
+        description="Device uptime in seconds as reported by firmware.",
+    )
+    countdown_timer_remaining: int | None = Field(
+        default=None,
+        description="Seconds remaining on local shutdown countdown timer.",
+    )
+    last_seen: datetime | None = Field(
+        default=None,
+        description="Timestamp when the device last contacted the server.",
+    )
+    reported_at: datetime | None = Field(
+        default=None,
+        description="Timestamp reported by the device for the status payload.",
+    )
+    server_received_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when the server persisted the status payload.",
+    )
+    free_heap_bytes: int | None = Field(
+        default=None,
+        description="Optional telemetry: free heap memory in bytes.",
+    )
+    wifi_ps_mode: int | None = Field(
+        default=None,
+        description="Optional telemetry: WiFi power save mode.",
+    )
+    cpu_freq_mhz: int | None = Field(
+        default=None,
+        description="Optional telemetry: CPU frequency in MHz.",
+    )
+    watchdog_reset_count: int | None = Field(
+        default=None,
+        description="Optional telemetry: Watchdog reset count.",
+    )
+    last_reset_reason: str | None = Field(
+        default=None,
+        description="Optional telemetry: Last reset reason string.",
+    )
+
+
+class BunkerStatusResponse(BaseModel):
+    """Composite bunker status including devices and weather context."""
+
+    bunker: BunkerResponse
+    devices: list[BunkerDeviceStatus]
+    weather: WeatherData | None = Field(
+        default=None,
+        description="Latest cached weather observation, or null if unavailable.",
+    )
+
+
 class BunkerListResponse(BaseModel):
     """Response wrapper for listing bunkers."""
 
@@ -85,6 +157,8 @@ class BunkerListResponse(BaseModel):
 __all__ = [
     "BunkerCreate",
     "BunkerListResponse",
+    "BunkerDeviceStatus",
     "BunkerResponse",
+    "BunkerStatusResponse",
     "BunkerUpdate",
 ]

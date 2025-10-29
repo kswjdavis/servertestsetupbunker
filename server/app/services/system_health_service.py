@@ -56,7 +56,9 @@ class SystemHealthService:
             DEFAULT_OFFLINE_THRESHOLD_SECONDS,
         ) or DEFAULT_OFFLINE_THRESHOLD_SECONDS
 
-        devices = await self.device_repository.list_devices()
+        device_bunker_tuples = await self.device_repository.list_devices()
+        # Extract just the Device objects from tuples
+        devices = [device for device, _bunker in device_bunker_tuples]
         total_devices = len(devices)
         offline_devices = self._get_offline_devices(
             devices, offline_threshold_seconds, now

@@ -88,6 +88,10 @@ export const meetsShutdownCriteria = exceedsWindConditionCriteria;
  * @returns Formatted string with 1 decimal place
  */
 export function formatWindSpeed(speed: number): string {
+  // Handle undefined/null/NaN
+  if (speed === undefined || speed === null || isNaN(speed)) {
+    return '0.0 mph';
+  }
   return `${speed.toFixed(1)} mph`;
 }
 

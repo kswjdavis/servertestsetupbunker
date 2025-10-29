@@ -137,7 +137,9 @@ class DataStore:
                 new_state INTEGER NOT NULL,
                 triggered_by TEXT,
                 notes TEXT,
-                duration_seconds INTEGER
+                duration_seconds INTEGER,
+                gpio_state INTEGER,
+                server_decision TEXT
             )
             """,
         ]
@@ -222,12 +224,14 @@ class DataStore:
             self._conn.commit()
 
     def record_relay_operation(self, state_change_at: str, new_state: int,
-                                triggered_by: Optional[str] = None, notes: str = "") -> None:
+                                triggered_by: Optional[str] = None, notes: str = "",
+                                gpio_state: Optional[int] = None,
+                                server_decision: Optional[str] = None) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO relay_operations (state_change_at, new_state, triggered_by, notes) "
-                "VALUES (?, ?, ?, ?)",
-                (state_change_at, new_state, triggered_by, notes or None),
+                "INSERT INTO relay_operations (state_change_at, new_state, triggered_by, notes, gpio_state, server_decision) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (state_change_at, new_state, triggered_by, notes or None, gpio_state, server_decision),
             )
             self._conn.commit()
 
@@ -252,14 +256,42 @@ class DataStore:
             return row[0] if row else None
 
     def update_last_relay_duration(self, duration_seconds: int) -> None:
-        """Update the duration of the last relay state."""
+        """Update the duration of the PREVIOUS relay state (second-to-last record)."""
         with self._lock:
             self._conn.execute(
                 "UPDATE relay_operations SET duration_seconds = ? "
-                "WHERE id = (SELECT id FROM relay_operations ORDER BY state_change_at DESC LIMIT 1)",
+                "WHERE id = (SELECT id FROM relay_operations ORDER BY state_change_at DESC LIMIT 1 OFFSET 1)",
                 (duration_seconds,)
             )
             self._conn.commit()
+
+    def get_gpio_state(self, pin: int) -> Optional[int]:
+        """Get the most recent GPIO state for a given pin."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT state FROM gpio_events WHERE pin = ? ORDER BY recorded_at DESC LIMIT 1",
+                (pin,)
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+
+    def get_last_server_decision(self) -> Optional[str]:
+        """Get the most recent server decision (shutdown_allowed value)."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT message FROM serial_logs "
+                "WHERE message LIKE '%shutdown_allowed%' "
+                "ORDER BY recorded_at DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                # Extract shutdown_allowed value from message
+                msg = row[0]
+                if "shutdown_allowed=true" in msg:
+                    return "shutdown_allowed=true"
+                elif "shutdown_allowed=false" in msg:
+                    return "shutdown_allowed=false"
+            return None
 
     def get_last_uptime(self) -> Optional[int]:
         """Get the last recorded uptime value for reboot detection."""
@@ -460,7 +492,13 @@ class SerialWorker(threading.Thread):
 
                 # Only record if state actually changed
                 if last_state is None or last_state != new_state:
-                    # Calculate duration of previous state
+                    # Get current GPIO state from hardware (pin 17 for relay)
+                    gpio_state = self._datastore.get_gpio_state(17)
+
+                    # Get most recent server decision
+                    server_decision = self._datastore.get_last_server_decision()
+
+                    # Calculate duration of previous state BEFORE inserting new record
                     if last_state is not None:
                         last_change_time = self._datastore.get_last_relay_change_time()
                         if last_change_time:
@@ -469,14 +507,24 @@ class SerialWorker(threading.Thread):
                                 last_dt = datetime.fromisoformat(last_change_time.replace('Z', '+00:00'))
                                 current_dt = datetime.fromisoformat(recorded_at.replace('Z', '+00:00'))
                                 duration = int((current_dt - last_dt).total_seconds())
-                                self._datastore.update_last_relay_duration(duration)
                             except (ValueError, AttributeError):
-                                pass  # Couldn't calculate duration
+                                duration = None
+                        else:
+                            duration = None
+                    else:
+                        duration = None
 
                     triggered_by = "server_command"  # Assume server command unless we detect otherwise
                     if "fail-safe" in message.lower() or "forced" in message.lower() or "locked" in message.lower():
                         triggered_by = "fail_safe"
-                    self._datastore.record_relay_operation(recorded_at, new_state, triggered_by, message)
+
+                    # Insert new record
+                    self._datastore.record_relay_operation(recorded_at, new_state, triggered_by, message,
+                                                          gpio_state, server_decision)
+
+                    # NOW update the previous record's duration (which is now second-to-last)
+                    if duration is not None and last_state is not None:
+                        self._datastore.update_last_relay_duration(duration)
 
         except (ValueError, IndexError) as exc:
             # Parsing error - log but don't crash

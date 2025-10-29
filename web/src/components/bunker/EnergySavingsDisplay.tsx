@@ -13,6 +13,15 @@ export default function EnergySavingsDisplay({
   className = '',
   showTrend = false
 }: EnergySavingsDisplayProps) {
+  // Safety check for undefined values
+  const kwh_saved = savings?.total_kwh_saved ?? 0;
+  const cost_saved = savings?.total_cost_saved ?? 0;
+  const off_time = savings?.total_off_time_seconds ?? 0;
+
+  if (!savings) {
+    return null;
+  }
+
   return (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm p-6 ${className}`}>
       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -28,7 +37,7 @@ export default function EnergySavingsDisplay({
         <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
           <div className="text-sm text-gray-600 mb-2">Energy Saved</div>
           <div className="text-2xl font-bold text-gray-900">
-            {formatEnergy(savings.total_kwh_saved)}
+            {formatEnergy(kwh_saved)}
           </div>
           {showTrend && savings.trend && (
             <div className={`text-xs mt-2 flex items-center ${
@@ -50,7 +59,7 @@ export default function EnergySavingsDisplay({
         <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
           <div className="text-sm text-gray-600 mb-2">Cost Saved</div>
           <div className="text-2xl font-bold text-green-600">
-            {formatCurrency(savings.total_cost_saved)}
+            {formatCurrency(cost_saved)}
           </div>
           <div className="text-xs text-gray-500 mt-2">
             @ $0.12/kWh
@@ -61,7 +70,7 @@ export default function EnergySavingsDisplay({
         <div className="bg-gray-50 rounded-md p-4 border border-gray-100">
           <div className="text-sm text-gray-600 mb-2">Fans Off Time</div>
           <div className="text-2xl font-bold text-gray-900">
-            {formatDuration(savings.total_off_time_seconds)}
+            {formatDuration(off_time)}
           </div>
           <div className="text-xs text-gray-500 mt-2">
             Total downtime
@@ -75,11 +84,11 @@ export default function EnergySavingsDisplay({
           <span className="font-medium text-gray-800">Environmental Impact:</span>
           <span className="ml-2 text-green-700 font-semibold">
             {/* Assuming 0.92 lbs CO2 per kWh (US average) */}
-            {(savings.total_kwh_saved * 0.92).toFixed(1)} lbs CO₂ saved
+            {(kwh_saved * 0.92).toFixed(1)} lbs CO₂ saved
           </span>
           <span className="mx-2 text-gray-400">•</span>
           <span className="text-gray-600">
-            Equivalent to planting {Math.round(savings.total_kwh_saved * 0.02)} trees
+            Equivalent to planting {Math.round(kwh_saved * 0.02)} trees
           </span>
         </div>
       </div>

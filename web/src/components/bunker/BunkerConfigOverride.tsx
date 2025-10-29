@@ -328,7 +328,7 @@ export default function BunkerConfigOverride({
           <div className="flex items-center text-sm">
             <span className="w-32 text-gray-600">Electricity Cost:</span>
             <span className="font-medium">
-              ${useCustomElectricityCost ? electricityCost.toFixed(3) : globalConfig.default_electricity_cost_kwh.toFixed(3)}/kWh
+              ${useCustomElectricityCost ? (electricityCost?.toFixed(3) ?? '0.000') : (globalConfig.default_electricity_cost_kwh?.toFixed(3) ?? '0.000')}/kWh
             </span>
             <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
               useCustomElectricityCost

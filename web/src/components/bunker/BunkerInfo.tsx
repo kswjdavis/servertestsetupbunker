@@ -41,10 +41,10 @@ export default function BunkerInfo({ bunker, weather }: BunkerInfoProps) {
           <h3 className="text-sm font-medium text-gray-500 mb-2">Location</h3>
           <div className="space-y-1">
             <p className="text-sm text-gray-900">
-              Lat: {bunker.latitude.toFixed(6)}°
+              Lat: {bunker.latitude?.toFixed(6) ?? 'N/A'}°
             </p>
             <p className="text-sm text-gray-900">
-              Lon: {bunker.longitude.toFixed(6)}°
+              Lon: {bunker.longitude?.toFixed(6) ?? 'N/A'}°
             </p>
             <p className="text-sm text-gray-900">
               Orientation: {bunker.orientation}°
@@ -74,10 +74,10 @@ export default function BunkerInfo({ bunker, weather }: BunkerInfoProps) {
             <h3 className="text-sm font-medium text-gray-500 mb-2">Current Weather</h3>
             <div className="space-y-1">
               <p className="text-sm text-gray-900">
-                Wind: {weather.wind_speed.toFixed(1)} mph from {getWindDirectionText(weather.wind_direction)}
+                Wind: {weather.wind_speed?.toFixed(1) ?? 'N/A'} mph from {getWindDirectionText(weather.wind_direction)}
               </p>
               <p className="text-sm text-gray-900">
-                Temperature: {weather.temperature.toFixed(1)}°F
+                Temperature: {weather.temperature?.toFixed(1) ?? 'N/A'}°F
               </p>
               <p className="text-sm text-gray-900">
                 Humidity: {weather.humidity}%

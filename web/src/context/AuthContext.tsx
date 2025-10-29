@@ -33,9 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
+      // Use empty string for relative URLs (Docker/nginx proxy), otherwise use configured URL
+      const apiUrl = import.meta.env.VITE_API_URL === '' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:8000');
       // Real API call
       const response = await axios.post<TokenResponse>(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/login`,
+        `${apiUrl}/api/v1/auth/login`,
         { username, password }
       );
 
@@ -56,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/v1/auth/logout`);
+      const apiUrl = import.meta.env.VITE_API_URL === '' ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:8000');
+      await axios.post(`${apiUrl}/api/v1/auth/logout`);
     } catch (error) {
       console.error('Logout API call failed:', error);
     } finally {

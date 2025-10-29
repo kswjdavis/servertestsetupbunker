@@ -35,7 +35,7 @@ export default function DeviceListPage() {
       setDevices(updatedDevices);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch devices:', error);
+      console.error('Failed to fetch devices:', error instanceof Error ? error.message : String(error));
       // Use mock data as fallback
       console.log('Using mock devices for demo');
       const updatedMockDevices = mockDevices.map(device => ({
