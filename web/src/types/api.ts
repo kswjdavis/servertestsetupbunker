@@ -80,6 +80,19 @@ export interface DeviceWithBunkerInfo extends Device {
   bunker_name: string;
 }
 
+export interface DeviceStatus {
+  device_id: string;
+  fan_position: number;
+  mac_address?: string;
+  name?: string;
+  relay_state: 'ON' | 'OFF';
+  is_online: boolean;
+  wifi_rssi?: number;
+  uptime_seconds?: number;
+  countdown_timer_remaining?: number;
+  last_seen: string;
+}
+
 export interface EmergencyOnRequest {
   bunker_id?: string;
 }

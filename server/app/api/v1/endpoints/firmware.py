@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Dict, Union
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -34,7 +34,7 @@ def _ensure_storage_dir() -> Path:
 async def upload_firmware_binary(
     _: AdminUser,
     file: UploadFile = File(...),
-) -> dict[str, str | int]:
+) -> Dict[str, Union[str, int]]:
     """Upload a new firmware binary and promote it as the latest image."""
     if file.content_type not in ("application/octet-stream", "application/x-binary"):
         raise HTTPException(

@@ -30,6 +30,7 @@ from app.models.user import User
 from app.models.bunker import Bunker
 from app.models.device import Device
 from app.models.device_status import DeviceStatus
+from app.models.device_runtime_log import DeviceRuntimeLog
 from app.models.time_window_override import TimeWindowOverride
 from app.models.revoked_token import RevokedToken
 from app.models.weather_data import WeatherData
@@ -41,6 +42,7 @@ __all__ = [
     "Bunker",
     "Device",
     "DeviceStatus",
+    "DeviceRuntimeLog",
     "TimeWindowOverride",
     "WeatherData",
     "GlobalConfig",

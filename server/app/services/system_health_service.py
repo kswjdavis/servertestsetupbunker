@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.device import Device
 from app.repositories.device_repository import DeviceRepository
 from app.repositories.global_config_repository import GlobalConfigRepository
+from app.repositories.runtime_log_repository import RuntimeLogRepository
 from app.schemas.system_health import (
     DatabaseStatus,
     HealthAlert,
@@ -43,6 +44,7 @@ class SystemHealthService:
         self.session = session
         self.device_repository = DeviceRepository(session)
         self.config_repository = GlobalConfigRepository(session)
+        self.runtime_log_repository = RuntimeLogRepository(session)
 
     async def get_health_metrics(self) -> SystemHealthSummary:
         """Return aggregated health metrics for the dashboard."""
@@ -258,12 +260,77 @@ class SystemHealthService:
 
     async def _calculate_energy_savings(self) -> float:
         """
-        Placeholder for future energy savings aggregation.
+        Calculate total energy savings across all devices (lifetime).
+
+        This method computes energy savings by comparing baseline power consumption
+        (if fans ran continuously) against actual measured runtime from logs.
+
+        Algorithm:
+        1. For each device, calculate baseline runtime (100% duty cycle from first log to now)
+        2. Subtract actual ON time from runtime logs
+        3. Calculate saved kWh using device power consumption
+        4. Aggregate across all devices
 
         Returns:
-            float: Total energy saved in kWh (currently always 0.0).
+            float: Total energy saved in kWh across all devices (lifetime).
         """
-        return 0.0
+        config = await self.config_repository.get_or_create_default()
+        devices = await self.device_repository.list_devices()
+
+        if not devices:
+            return 0.0
+
+        total_kwh_saved = 0.0
+
+        # Get ON times for all devices (lifetime)
+        device_on_times = await self.runtime_log_repository.get_all_device_on_times(
+            start_time=None,  # Lifetime
+            end_time=None,
+        )
+
+        if not device_on_times:
+            # No runtime logs exist yet
+            return 0.0
+
+        now = datetime.now(timezone.utc)
+
+        for device in devices:
+            # Get bunker to determine power consumption
+            bunker = device.bunker
+            if bunker is None:
+                continue
+
+            # Determine power consumption (bunker-specific or global default)
+            fan_power_watts = bunker.fan_power_watts or config.default_fan_power_watts
+
+            # Get actual ON time for this device
+            actual_on_seconds = device_on_times.get(device.id, 0.0)
+
+            if actual_on_seconds == 0.0:
+                # No runtime data for this device
+                continue
+
+            # Calculate baseline: device could have run from first log to now
+            # For simplicity in POC, baseline = time since provisioning
+            # A more sophisticated approach would track "applicable" time windows
+            device_lifetime_seconds = (now - device.provisioned_at).total_seconds()
+
+            if device_lifetime_seconds <= 0:
+                continue
+
+            # Baseline runtime (100% duty cycle)
+            baseline_runtime_seconds = device_lifetime_seconds
+
+            # Savings = baseline - actual (clamped to >= 0)
+            saved_runtime_seconds = max(0.0, baseline_runtime_seconds - actual_on_seconds)
+
+            # Convert to kWh: (watts × hours) / 1000
+            saved_hours = saved_runtime_seconds / 3600.0
+            saved_kwh = (fan_power_watts * saved_hours) / 1000.0
+
+            total_kwh_saved += saved_kwh
+
+        return total_kwh_saved
 
     def _determine_overall_status(self, alerts: Iterable[HealthAlert]) -> OverallStatus:
         """Derive overall status severity based on alerts."""

@@ -34,7 +34,7 @@ class Device(Base):
     bunker_id: Mapped[UUID] = mapped_column(
         ForeignKey("bunkers.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    fan_position: Mapped[int] = mapped_column(Integer, nullable=False)
+    fan_position: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     mac_address: Mapped[str] = mapped_column(String(17), unique=True, nullable=False, index=True)
     firmware_version: Mapped[str | None] = mapped_column(String(50))
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

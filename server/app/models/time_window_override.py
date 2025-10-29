@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base, utc_now
@@ -30,13 +30,13 @@ class TimeWindowOverride(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     bunker_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("bunkers.id", ondelete="CASCADE")
+        ForeignKey("bunkers.id", ondelete="CASCADE"), index=True
     )
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id"), nullable=False
+        ForeignKey("users.id"), nullable=False, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
@@ -52,6 +52,7 @@ class TimeWindowOverride(Base):
 
     __table_args__ = (
         CheckConstraint("end_time > start_time", name="check_time_window"),
+        Index("idx_time_window_overrides_window", "start_time", "end_time"),
     )
 
     def __repr__(self) -> str:

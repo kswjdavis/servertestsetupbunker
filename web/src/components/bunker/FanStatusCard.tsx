@@ -5,7 +5,7 @@ interface FanStatusCardProps {
   fanPosition: number;
   relayState: 'ON' | 'OFF';
   isOnline: boolean;
-  wifiRssi: number;
+  wifiRssi?: number;
   lastSeen: string;
   onClick: () => void;
 }
@@ -31,7 +31,7 @@ export default function FanStatusCard({
   };
 
   const getWifiStrength = () => {
-    if (!isOnline) return 0;
+    if (!isOnline || !wifiRssi) return 0;
     if (wifiRssi >= -50) return 4;
     if (wifiRssi >= -60) return 3;
     if (wifiRssi >= -70) return 2;
@@ -71,7 +71,7 @@ export default function FanStatusCard({
         </p>
 
         {/* WiFi Signal Strength */}
-        {isOnline && (
+        {isOnline && wifiRssi !== undefined && (
           <div className="flex items-center space-x-1 mb-2">
             <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
               <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />

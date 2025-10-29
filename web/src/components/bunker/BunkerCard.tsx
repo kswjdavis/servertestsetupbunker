@@ -93,7 +93,7 @@ export default function BunkerCard({
             {bunker.name}
           </h3>
           <p className="text-sm text-gray-600 truncate">
-            {bunker.address || `${bunker.latitude.toFixed(4)}, ${bunker.longitude.toFixed(4)}`}
+            {`${bunker.latitude.toFixed(4)}, ${bunker.longitude.toFixed(4)}`}
           </p>
         </div>
         <div className="flex flex-col items-center">

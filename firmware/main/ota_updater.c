@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "esp_log.h"
@@ -19,6 +18,10 @@
 #include "wifi_manager.h"
 
 static const char *TAG = "ota_updater";
+
+// External certificate (embedded via CMakeLists.txt)
+extern const uint8_t server_cert_pem_start[] asm("_binary_server_cert_pem_start");
+extern const uint8_t server_cert_pem_end[]   asm("_binary_server_cert_pem_end");
 
 #define OTA_CHECK_INTERVAL_HOURS 24
 #define OTA_CHECK_INTERVAL_MS (OTA_CHECK_INTERVAL_HOURS * 60 * 60 * 1000)
@@ -145,7 +148,7 @@ static esp_err_t ota_perform_update(void)
     esp_http_client_config_t http_config = {
         .url = s_firmware_url,
         .timeout_ms = 30000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
+        .cert_pem = (const char *)server_cert_pem_start,  // Use embedded server certificate
         .event_handler = ota_http_event_handler,
     };
 
@@ -157,17 +160,7 @@ static esp_err_t ota_perform_update(void)
     esp_err_t ret = esp_https_ota(&ota_config);
 
     if (ret == ESP_OK) {
-        const esp_app_desc_t *new_app_info = esp_https_ota_get_app_description();
-        if (new_app_info != NULL) {
-            ESP_LOGI(
-                TAG,
-                "OTA update successful: new firmware v%s (build %s)",
-                new_app_info->version,
-                new_app_info->date
-            );
-        } else {
-            ESP_LOGI(TAG, "OTA update successful");
-        }
+        ESP_LOGI(TAG, "OTA update successful - new firmware downloaded and verified");
         ESP_LOGI(TAG, "Rebooting to apply new firmware...");
         vTaskDelay(pdMS_TO_TICKS(1000));
         esp_restart();

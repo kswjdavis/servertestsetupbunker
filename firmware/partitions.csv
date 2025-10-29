@@ -1,6 +1,9 @@
 # ESP32 Partition Table for Bunkercolab Firmware (4MB Flash)
+# OTA-enabled with dual app partitions for rollback support
 # Name,   Type, SubType, Offset,  Size, Flags
-# Bootloader + partition table: 0x1000-0xB000
-nvs,      data, nvs,     0xC000,  0x4000,
-phy_init, data, phy,     0x10000, 0x1000,
-factory,  app,  factory, 0x20000, 1408K,
+nvs,      data, nvs,     0xC000,  0x6000,
+otadata,  data, ota,     0x12000, 0x2000,
+phy_init, data, phy,     0x14000, 0x1000,
+factory,  app,  factory, 0x20000, 1280K,
+ota_0,    app,  ota_0,   ,        1280K,
+ota_1,    app,  ota_1,   ,        1280K,

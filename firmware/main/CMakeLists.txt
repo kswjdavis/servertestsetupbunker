@@ -12,7 +12,7 @@ idf_component_register(
         "auth_fail_safe.c"
         "watchdog_manager.c"
         "control_loop_logic.c"
-        # "ota_updater.c"  # Temporarily disabled - has API compatibility issues
+        "ota_updater.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi

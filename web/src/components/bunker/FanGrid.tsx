@@ -1,17 +1,6 @@
 import React from 'react';
 import FanStatusCard from './FanStatusCard';
-
-interface DeviceStatus {
-  device_id: string;
-  fan_position: number;
-  mac_address: string;
-  relay_state: 'ON' | 'OFF';
-  is_online: boolean;
-  wifi_rssi: number;
-  uptime_seconds: number;
-  countdown_timer_remaining: number;
-  last_seen: string;
-}
+import type { DeviceStatus } from '../../types/api';
 
 interface FanGridProps {
   devices: DeviceStatus[];

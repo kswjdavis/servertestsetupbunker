@@ -39,7 +39,7 @@
 #include "esp_timer.h"
 #include "control_loop_logic.h"
 #include "led_controller.h"
-// #include "ota_updater.h"  // Temporarily disabled - API compatibility issues
+#include "ota_updater.h"
 #include "firmware_version.h"
 
 // Logging tag
@@ -542,11 +542,10 @@ void app_main(void)
     ESP_LOGI(TAG, "HTTPS client initialized");
 
     // Start OTA updater task (best-effort; device continues even if task fails to start)
-    // TEMPORARILY DISABLED: OTA has API compatibility issues with ESP-IDF 5.5.1
-    // esp_err_t ota_ret = ota_updater_start(server_url);
-    // if (ota_ret != ESP_OK) {
-    //     ESP_LOGW(TAG, "Failed to start OTA updater: %s", esp_err_to_name(ota_ret));
-    // }
+    esp_err_t ota_ret = ota_updater_start(server_url);
+    if (ota_ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to start OTA updater: %s", esp_err_to_name(ota_ret));
+    }
 
     // ========================================================================
     // Stage 6: Start Control Loop Task
