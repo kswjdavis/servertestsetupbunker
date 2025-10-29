@@ -71,7 +71,12 @@ async def login_user(
         0,
         int((expires_at - datetime.now(timezone.utc)).total_seconds()),
     )
-    return TokenResponse(access_token=token, token_type="bearer", expires_in=expires_in)
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=expires_in,
+        user=UserResponse.model_validate(user)
+    )
 
 
 @router.post(

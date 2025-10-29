@@ -33,29 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      // For development: mock authentication when backend is unavailable
-      if (username === 'admin' && password === 'admin123') {
-        const mockUser: User = {
-          id: '123e4567-e89b-12d3-a456-426614174000',
-          username: 'admin',
-          email: 'admin@bunkercolab.com',
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        const mockToken = 'mock-jwt-token-for-development';
-
-        localStorage.setItem('access_token', mockToken);
-        localStorage.setItem('current_user', JSON.stringify(mockUser));
-
-        setToken(mockToken);
-        setCurrentUser(mockUser);
-
-        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-        return;
-      }
-
-      // Real API call (when backend is available)
+      // Real API call
       const response = await axios.post<TokenResponse>(
         `${import.meta.env.VITE_API_URL}/api/v1/auth/login`,
         { username, password }

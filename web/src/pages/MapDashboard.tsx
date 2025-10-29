@@ -116,7 +116,7 @@ export default function MapDashboard() {
       // Fetch bunkers
       try {
         const bunkersResponse = await api.get('/api/v1/bunkers');
-        setBunkers(bunkersResponse.data);
+        setBunkers(bunkersResponse.data.bunkers || []);
         setError(null);
       } catch (err) {
         console.error('Error fetching bunkers:', err);
@@ -129,7 +129,15 @@ export default function MapDashboard() {
       // Fetch weather data
       try {
         const weatherResponse = await api.get('/api/v1/weather/current');
-        setWeatherData(weatherResponse.data);
+        const apiData = weatherResponse.data;
+        // Transform API response to match WeatherData interface
+        setWeatherData({
+          id: apiData.station_id,
+          wind_speed: apiData.wind_speed_mph,
+          wind_direction: apiData.wind_direction_degrees,
+          temperature: apiData.temperature_f,
+          measured_at: apiData.observation_time
+        });
       } catch (err) {
         console.error('Error fetching weather data:', err);
         // Use mock data as fallback for demo

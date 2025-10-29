@@ -30,6 +30,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
+    user: "UserResponse"
 
 
 class UserResponse(BaseModel):
