@@ -13,6 +13,7 @@
 #include "esp_ota_ops.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "nvs_flash.h"
 
 #include "firmware_version.h"
 #include "wifi_manager.h"
@@ -143,8 +144,110 @@ static esp_err_t ota_http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
+// Context for capturing version header in event handler
+typedef struct {
+    char version[64];
+    bool found;
+} version_check_context_t;
+
+static esp_err_t version_check_http_event_handler(esp_http_client_event_t *evt)
+{
+    version_check_context_t *ctx = (version_check_context_t *)evt->user_data;
+
+    switch (evt->event_id) {
+        case HTTP_EVENT_ON_HEADER:
+            // Check if this is the x-firmware-version header
+            if (strcasecmp(evt->header_key, "x-firmware-version") == 0) {
+                strncpy(ctx->version, evt->header_value, sizeof(ctx->version) - 1);
+                ctx->version[sizeof(ctx->version) - 1] = '\0';
+                ctx->found = true;
+                ESP_LOGI(TAG, "Found firmware version header: %s", ctx->version);
+            }
+            break;
+        default:
+            break;
+    }
+    return ESP_OK;
+}
+
+static bool ota_check_version_changed(void)
+{
+    version_check_context_t ctx = {0};
+
+    // Make HEAD request to check firmware version without downloading
+    esp_http_client_config_t config = {
+        .url = s_firmware_url,
+        .method = HTTP_METHOD_HEAD,
+        .timeout_ms = 10000,
+        .cert_pem = (const char *)server_cert_pem_start,
+        .event_handler = version_check_http_event_handler,
+        .user_data = &ctx,
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) {
+        ESP_LOGE(TAG, "Failed to initialize HTTP client for version check");
+        return true;  // Fail open: allow update attempt if version check fails
+    }
+
+    // Perform HEAD request (this will trigger event handler for headers)
+    esp_err_t err = esp_http_client_perform(client);
+    int status_code = esp_http_client_get_status_code(client);
+
+    ESP_LOGI(TAG, "HEAD request: HTTP %d", status_code);
+
+    if (err != ESP_OK || status_code != 200) {
+        ESP_LOGW(TAG, "HEAD request failed: err=%s, status=%d",
+                 esp_err_to_name(err), status_code);
+        esp_http_client_cleanup(client);
+        return true;  // Fail open
+    }
+
+    esp_http_client_cleanup(client);
+
+    if (!ctx.found) {
+        ESP_LOGW(TAG, "No x-firmware-version header found, will attempt update");
+        return true;  // No version info, attempt update
+    }
+
+    ESP_LOGI(TAG, "Server firmware version: %s", ctx.version);
+
+    // Compare with last installed version from NVS
+    nvs_handle_t nvs;
+    char last_version[64] = {0};
+    bool version_changed = true;
+
+    if (nvs_open("ota", NVS_READWRITE, &nvs) == ESP_OK) {
+        size_t len = sizeof(last_version);
+        if (nvs_get_str(nvs, "last_version", last_version, &len) == ESP_OK) {
+            ESP_LOGI(TAG, "Installed firmware version: %s", last_version);
+            version_changed = (strcmp(ctx.version, last_version) != 0);
+        } else {
+            ESP_LOGI(TAG, "No previous version recorded");
+        }
+
+        if (!version_changed) {
+            ESP_LOGI(TAG, "Firmware version unchanged, skipping OTA");
+        } else {
+            // Save new version to NVS after successful update
+            nvs_set_str(nvs, "last_version", ctx.version);
+            nvs_commit(nvs);
+            ESP_LOGI(TAG, "New firmware version available, will update");
+        }
+        nvs_close(nvs);
+    }
+
+    return version_changed;
+}
+
 static esp_err_t ota_perform_update(void)
 {
+    // Check if version changed before downloading
+    if (!ota_check_version_changed()) {
+        ESP_LOGI(TAG, "OTA check: firmware is up to date");
+        return ESP_OK;
+    }
+
     esp_http_client_config_t http_config = {
         .url = s_firmware_url,
         .timeout_ms = 30000,
@@ -156,7 +259,7 @@ static esp_err_t ota_perform_update(void)
         .http_config = &http_config,
     };
 
-    ESP_LOGI(TAG, "Checking for OTA update at %s", s_firmware_url);
+    ESP_LOGI(TAG, "Downloading firmware update from %s", s_firmware_url);
     esp_err_t ret = esp_https_ota(&ota_config);
 
     if (ret == ESP_OK) {

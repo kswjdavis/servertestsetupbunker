@@ -45,6 +45,9 @@
 // Logging tag
 static const char *TAG = "main";
 
+// Default production server URL
+#define DEFAULT_SERVER_URL "https://bunker.americanagrionics.com"
+
 // Application state
 typedef enum {
     APP_STATE_INIT,
@@ -509,17 +512,26 @@ void app_main(void)
         return;
     }
 
-    // Load server URL from NVS
+    // Load server URL from NVS, or use default production URL
     char server_url[256] = {0};
     ret = nvs_storage_get_server_url(server_url);
     if (ret == ESP_OK) {
+        // Migrate from old IP-based URL to domain name
+        if (strstr(server_url, "206.189.210.203") != NULL) {
+            ESP_LOGW(TAG, "Migrating from old IP URL to domain: %s -> %s", server_url, DEFAULT_SERVER_URL);
+            strncpy(server_url, DEFAULT_SERVER_URL, sizeof(server_url) - 1);
+            nvs_storage_set_server_url(server_url);  // Save new URL
+        }
         http_client_set_server_url(server_url);
         ESP_LOGI(TAG, "Server URL: %s", server_url);
     } else {
-        ESP_LOGE(TAG, "No server URL in NVS - device must be provisioned first");
-        ESP_LOGE(TAG, "Set server URL using nvs_storage_set_server_url()");
-        app_state = APP_STATE_ERROR;
-        return;
+        // Use default production server URL
+        strncpy(server_url, DEFAULT_SERVER_URL, sizeof(server_url) - 1);
+        http_client_set_server_url(server_url);
+        ESP_LOGW(TAG, "No server URL in NVS, using default: %s", server_url);
+
+        // Save default URL to NVS for future boots
+        nvs_storage_set_server_url(server_url);
     }
 
     // Load auth token from NVS
@@ -555,7 +567,7 @@ void app_main(void)
     BaseType_t control_loop_created = xTaskCreatePinnedToCore(
         control_loop_task,
         "control_loop",
-        4096,
+        16384,  // Increased from 4096 to support Let's Encrypt certificate validation
         NULL,
         6,
         NULL,

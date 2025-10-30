@@ -7,8 +7,8 @@ export const provisionDevice = async (request: DeviceProvisioningRequest): Promi
 };
 
 export const fetchBunkers = async (): Promise<Bunker[]> => {
-  const response = await api.get<Bunker[]>('/api/v1/bunkers');
-  return response.data;
+  const response = await api.get<{bunkers: Bunker[]}>('/api/v1/bunkers');
+  return response.data.bunkers;
 };
 
 export const listDevices = async (): Promise<DeviceWithBunkerInfo[]> => {

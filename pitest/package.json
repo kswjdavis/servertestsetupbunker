@@ -5,7 +5,8 @@
   "main": "e2e-test.js",
   "scripts": {
     "test": "node e2e-test.js",
-    "test:comprehensive": "node e2e-comprehensive.js"
+    "test:comprehensive": "node e2e-comprehensive.js",
+    "test:hardware": "node e2e-hardware-comprehensive.js"
   },
   "dependencies": {
     "puppeteer": "^21.6.0"

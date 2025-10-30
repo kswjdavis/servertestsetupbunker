@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated, Dict, Union
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -69,6 +69,33 @@ async def upload_firmware_binary(
     }
 
 
+def _get_firmware_version(latest_path: Path) -> str:
+    """Get firmware version from modification time."""
+    return str(int(latest_path.stat().st_mtime))
+
+
+@router.head(
+    "/latest.bin",
+    status_code=status.HTTP_200_OK,
+)
+async def check_firmware_version() -> Dict[str, str]:
+    """Check firmware version without downloading (for OTA version checking)."""
+    storage_dir = _ensure_storage_dir()
+    latest_path = storage_dir / "latest.bin"
+    if not latest_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No firmware image uploaded yet.",
+        )
+
+    version = _get_firmware_version(latest_path)
+    response = Response(status_code=200)
+    response.headers["X-Firmware-Version"] = version
+    response.headers["Content-Length"] = str(latest_path.stat().st_size)
+    response.headers["Content-Type"] = "application/octet-stream"
+    return response
+
+
 @router.get(
     "/latest.bin",
     response_class=FileResponse,
@@ -84,8 +111,11 @@ async def download_latest_firmware() -> FileResponse:
             detail="No firmware image uploaded yet.",
         )
 
+    version = _get_firmware_version(latest_path)
+
     return FileResponse(
         latest_path,
         media_type="application/octet-stream",
         filename="latest.bin",
+        headers={"X-Firmware-Version": version}
     )

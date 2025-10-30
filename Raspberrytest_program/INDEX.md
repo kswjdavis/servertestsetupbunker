@@ -8,7 +8,9 @@
 
 ## 🚀 START HERE
 
-👉 **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Complete setup guide (start here!)
+👉 **New to this project?** [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md) - Complete setup guide
+
+👉 **Need quick access to check the Pi?** [QUICK_ACCESS_GUIDE.md](QUICK_ACCESS_GUIDE.md) - Fast reference for checking status
 
 ---
 
@@ -19,6 +21,7 @@
 | File | Purpose | When to Use |
 |------|---------|-------------|
 | **SETUP_INSTRUCTIONS.md** | Master setup guide with 5-step quick start | Start here for new setup |
+| **QUICK_ACCESS_GUIDE.md** | Fast reference for checking Pi status | Daily monitoring / troubleshooting |
 | **README.md** | Quick reference and overview | Quick lookup |
 | **wpa_supplicant.conf.template** | WiFi credentials template | Edit before flashing SD card |
 

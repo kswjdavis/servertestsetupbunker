@@ -17,8 +17,8 @@ export interface BunkerUpdateRequest extends BunkerCreateRequest {
 }
 
 export async function listBunkers(): Promise<Bunker[]> {
-  const response = await api.get<Bunker[]>('/api/v1/bunkers');
-  return response.data;
+  const response = await api.get<{bunkers: Bunker[]}>('/api/v1/bunkers');
+  return response.data.bunkers;
 }
 
 export async function getBunker(id: string): Promise<Bunker> {
