@@ -29,7 +29,7 @@ export default function BunkerCard({
     const offlineCount = devicesTotal - devicesOnline;
     const offlinePercentage = offlineCount / devicesTotal;
 
-    if (bunker.emergency_on_bunker) return 'critical';
+    if (bunker.emergency_on) return 'critical';
     if (offlinePercentage === 0) return 'ok';
     if (offlinePercentage <= 0.3) return 'warning';
     return 'critical';
@@ -80,7 +80,7 @@ export default function BunkerCard({
       }}
     >
       {/* Emergency Badge */}
-      {bunker.emergency_on_bunker && (
+      {bunker.emergency_on && (
         <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full shadow-md animate-pulse">
           EMERGENCY
         </div>

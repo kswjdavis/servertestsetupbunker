@@ -14,6 +14,12 @@ from app.api import api_router
 from app.core.config import settings
 from app.services.weather_service import weather_service
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 logger = logging.getLogger(__name__)
 
 

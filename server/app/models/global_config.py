@@ -20,6 +20,7 @@ class GlobalConfig(Base):
         default_fan_power_watts: Default fan power consumption for new bunkers
         weather_station_id: Weather station identifier to use (e.g., 'KOKC')
         weather_poll_interval_seconds: How often to poll weather API (seconds)
+        weather_staleness_minutes: How old weather data can be before considered stale (minutes)
         shutdown_broadcast_interval_seconds: How often to broadcast shutdown commands (seconds)
         device_offline_threshold_seconds: When to consider a device offline (seconds)
     """
@@ -33,6 +34,7 @@ class GlobalConfig(Base):
     default_fan_power_watts: Mapped[int] = mapped_column(Integer, nullable=False, default=1500)
     weather_station_id: Mapped[str] = mapped_column(String(10), nullable=False, default="KOKC")
     weather_poll_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    weather_staleness_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     shutdown_broadcast_interval_seconds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=60
     )

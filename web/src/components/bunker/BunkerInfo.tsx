@@ -88,7 +88,7 @@ export default function BunkerInfo({ bunker, weather }: BunkerInfoProps) {
       </div>
 
       {/* Emergency Mode Status */}
-      {bunker.emergency_on_bunker && (
+      {bunker.emergency_on && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
           <div className="flex items-center">
             <svg className="h-5 w-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">

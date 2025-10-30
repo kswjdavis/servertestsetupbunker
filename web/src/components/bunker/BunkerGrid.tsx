@@ -134,7 +134,7 @@ export default function BunkerGrid({ className = '' }: BunkerGridProps) {
 
       // Compute status
       let computedStatus: 'ok' | 'warning' | 'critical' = 'ok';
-      if (bunker.emergency_on_bunker) {
+      if (bunker.emergency_on) {
         computedStatus = 'critical';
       } else if (metrics.devicesTotal === 0) {
         computedStatus = 'critical';

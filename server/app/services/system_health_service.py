@@ -68,7 +68,7 @@ class SystemHealthService:
         alerts: list[HealthAlert] = []
         alerts.extend(self._build_offline_alerts(offline_devices, now))
 
-        weather_status = self._build_weather_status(now, alerts)
+        weather_status = self._build_weather_status(now, alerts, config)
         database_status = await self._build_database_status(now, alerts)
 
         total_energy_saved_kwh = await self._calculate_energy_savings()
@@ -157,12 +157,14 @@ class SystemHealthService:
         self,
         reference_time: datetime,
         alerts: list[HealthAlert],
+        config,
     ) -> WeatherServiceStatus:
         """Generate the weather service status and related alerts."""
         last_successful_fetch = weather_service.last_successful_fetch
+        staleness_minutes = getattr(config, "weather_staleness_minutes", 3)
         try:
             weather = weather_service.get_current_weather()
-            stale = weather_service.is_weather_stale()
+            stale = weather_service.is_weather_stale(staleness_minutes=staleness_minutes)
             status: WeatherServiceStatus
             if stale:
                 status_state = "degraded"

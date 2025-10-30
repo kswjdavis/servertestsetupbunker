@@ -60,7 +60,7 @@ export default function BunkerDetailPage() {
     if (bunkerStatus && bunkerStatus.bunker) {
       setBunkerStatus({
         ...bunkerStatus,
-        bunker: { ...bunkerStatus.bunker, emergency_on_bunker: active }
+        bunker: { ...bunkerStatus.bunker, emergency_on: active }
       });
     }
   };
@@ -73,7 +73,7 @@ export default function BunkerDetailPage() {
       await controlService.clearEmergencyBunker(bunkerStatus.bunker.id);
       setBunkerStatus({
         ...bunkerStatus,
-        bunker: { ...bunkerStatus.bunker, emergency_on_bunker: false }
+        bunker: { ...bunkerStatus.bunker, emergency_on: false }
       });
       alert('✅ Emergency mode cleared');
     } catch (error) {
@@ -81,7 +81,7 @@ export default function BunkerDetailPage() {
       // Mock success for demo
       setBunkerStatus({
         ...bunkerStatus,
-        bunker: { ...bunkerStatus.bunker, emergency_on_bunker: false }
+        bunker: { ...bunkerStatus.bunker, emergency_on: false }
       });
       alert('✅ Emergency mode cleared');
     } finally {
@@ -147,7 +147,7 @@ export default function BunkerDetailPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <ToastContainer />
       {/* Emergency Banner if active */}
-      {bunker.emergency_on_bunker && (
+      {bunker.emergency_on && (
         <EmergencyBanner
           scope="bunker"
           bunkerName={bunker.name}
@@ -200,7 +200,7 @@ export default function BunkerDetailPage() {
             scope="bunker"
             bunkerId={bunker.id}
             bunkerName={bunker.name}
-            isActive={bunker.emergency_on_bunker || false}
+            isActive={bunker.emergency_on || false}
             onToggle={handleEmergencyToggle}
             darkMode={false}
           />

@@ -30,7 +30,7 @@ export default function FanLayoutVisualization({
 
   const getFanStatus = (device: DeviceStatus | undefined, bunker?: Bunker): 'online-on' | 'online-off' | 'offline' | 'emergency' => {
     if (!device || !device.is_online) return 'offline';
-    if (bunker?.emergency_on_bunker) return 'emergency';
+    if (bunker?.emergency_on) return 'emergency';
     return device.relay_state === 'ON' ? 'online-on' : 'online-off';
   };
 
@@ -64,7 +64,7 @@ export default function FanLayoutVisualization({
       </div>
 
       {/* Emergency Banner if active */}
-      {bunker?.emergency_on_bunker && (
+      {bunker?.emergency_on && (
         <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-6 print:border-2">
           <div className="flex items-center">
             <svg className="w-5 h-5 text-amber-600 mr-2" fill="currentColor" viewBox="0 0 20 20">

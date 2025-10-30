@@ -12,6 +12,7 @@ const mockConfig: GlobalConfig = {
   default_fan_power_watts: 1500,
   weather_station_id: 'KGCK',  // Garden City, Kansas
   weather_poll_interval_seconds: 60,
+  weather_staleness_minutes: 3,
   shutdown_broadcast_interval_seconds: 60,
   device_offline_threshold_seconds: 120
 };
@@ -22,6 +23,7 @@ const helpTextMap = {
   default_electricity_cost_kwh: 'Cost per kilowatt-hour in USD. Used for savings calculations',
   default_fan_power_watts: 'Power consumption per fan in watts. Typical: 1000-2000W',
   weather_poll_interval_seconds: 'How often to fetch weather data (recommended: 60s)',
+  weather_staleness_minutes: 'Weather data older than this is considered stale (triggers fail-safe)',
   shutdown_broadcast_interval_seconds: 'How often server broadcasts to ESP32 devices (recommended: 60s)',
   device_offline_threshold_seconds: 'Mark device offline after this many seconds (recommended: 120s)'
 };
@@ -97,6 +99,7 @@ export default function SettingsPage() {
         default_fan_power_watts: formData.default_fan_power_watts,
         weather_station_id: formData.weather_station_id,
         weather_poll_interval_seconds: formData.weather_poll_interval_seconds,
+        weather_staleness_minutes: formData.weather_staleness_minutes,
         shutdown_broadcast_interval_seconds: formData.shutdown_broadcast_interval_seconds,
         device_offline_threshold_seconds: formData.device_offline_threshold_seconds
       });
@@ -245,6 +248,20 @@ export default function SettingsPage() {
                 min={10}
                 max={3600}
                 step={10}
+              />
+
+              <FormField
+                label="Weather Staleness Timeout"
+                name="weather_staleness_minutes"
+                type="number"
+                value={formData.weather_staleness_minutes}
+                onChange={(value) => handleFieldChange('weather_staleness_minutes', value)}
+                error={errors.weather_staleness_minutes}
+                helpText={helpTextMap.weather_staleness_minutes}
+                unit="minutes"
+                min={1}
+                max={60}
+                step={1}
               />
 
               <FormField

@@ -116,8 +116,10 @@ class ControlLogicEngine:
             logger.warning("Weather data unavailable: %s", exc)
             return self._make_decision(False, False, "weather_unavailable")
 
-        if weather_service.is_weather_stale():
-            logger.warning("Weather data stale; defaulting to fail-safe decision.")
+        # Get staleness threshold from global config (default to 3 minutes if not set)
+        staleness_minutes = getattr(config, "weather_staleness_minutes", 3)
+        if weather_service.is_weather_stale(staleness_minutes=staleness_minutes):
+            logger.warning("Weather data stale (threshold: %d minutes); defaulting to fail-safe decision.", staleness_minutes)
             return self._make_decision(False, False, "weather_stale")
 
         speed = weather.wind_speed_mph
@@ -148,31 +150,31 @@ class ControlLogicEngine:
         # State machine logic
         if current_relay_state == RelayState.ON:
             # Currently ON - check if we should turn OFF
-            if speed >= shutdown_threshold:
-                logger.info(
-                    "Hysteresis: Wind %.1f mph >= shutdown threshold %.1f mph - allowing shutdown",
-                    speed, shutdown_threshold
-                )
-                return self._make_decision(
-                    True, True, f"wind_exceeds_threshold_{shutdown_threshold}mph"
-                )
-            else:
-                logger.info(
-                    "Hysteresis: Wind %.1f mph < shutdown threshold %.1f mph - fans stay ON",
-                    speed, shutdown_threshold
-                )
-                return self._make_decision(
-                    False, True, f"wind_below_shutdown_threshold_{shutdown_threshold}mph"
-                )
-        else:  # current_relay_state == RelayState.OFF
-            # Currently OFF - check if we should turn back ON
             if speed < restart_threshold:
                 logger.info(
-                    "Hysteresis: Wind %.1f mph < restart threshold %.1f mph - fans turn ON",
+                    "Hysteresis: Wind %.1f mph < restart threshold %.1f mph - allowing shutdown",
                     speed, restart_threshold
                 )
                 return self._make_decision(
-                    False, True, f"wind_below_restart_threshold_{restart_threshold}mph"
+                    True, True, f"wind_below_restart_threshold_{restart_threshold}mph"
+                )
+            else:
+                logger.info(
+                    "Hysteresis: Wind %.1f mph >= restart threshold %.1f mph - fans stay ON",
+                    speed, restart_threshold
+                )
+                return self._make_decision(
+                    False, True, f"wind_above_restart_threshold_{restart_threshold}mph"
+                )
+        else:  # current_relay_state == RelayState.OFF
+            # Currently OFF - check if we should turn back ON
+            if speed >= shutdown_threshold:
+                logger.info(
+                    "Hysteresis: Wind %.1f mph >= shutdown threshold %.1f mph - fans turn ON",
+                    speed, shutdown_threshold
+                )
+                return self._make_decision(
+                    False, True, f"wind_exceeds_threshold_{shutdown_threshold}mph"
                 )
             else:
                 # Wind is between restart and shutdown thresholds - maintain current state (OFF)

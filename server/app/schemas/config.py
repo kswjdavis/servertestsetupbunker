@@ -39,6 +39,12 @@ class GlobalConfigBase(BaseModel):
         le=3600,
         description="How frequently to poll the weather API in seconds.",
     )
+    weather_staleness_minutes: int | None = Field(
+        default=None,
+        ge=1,
+        le=60,
+        description="How old weather data can be before considered stale (minutes).",
+    )
     shutdown_broadcast_interval_seconds: int | None = Field(
         default=None,
         ge=10,
@@ -75,6 +81,7 @@ class GlobalConfigResponse(GlobalConfigBase):
     id: int
     default_wind_threshold_hysteresis_mph: float
     weather_poll_interval_seconds: int
+    weather_staleness_minutes: int
     shutdown_broadcast_interval_seconds: int
     device_offline_threshold_seconds: int
     emergency_on_global: bool

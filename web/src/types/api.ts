@@ -35,7 +35,7 @@ export interface Bunker {
   fan_power_watts?: number;
   is_active: boolean;
   status?: 'online' | 'offline' | 'energy_saving';
-  emergency_on_bunker?: boolean;
+  emergency_on?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +113,7 @@ export interface GlobalConfig {
   default_fan_power_watts: number;
   weather_station_id: string;
   weather_poll_interval_seconds: number;
+  weather_staleness_minutes: number;
   shutdown_broadcast_interval_seconds: number;
   device_offline_threshold_seconds: number;
   created_at?: string;
@@ -125,6 +126,7 @@ export interface GlobalConfigUpdateRequest {
   default_fan_power_watts: number;
   weather_station_id: string;
   weather_poll_interval_seconds?: number;
+  weather_staleness_minutes?: number;
   shutdown_broadcast_interval_seconds?: number;
   device_offline_threshold_seconds?: number;
 }

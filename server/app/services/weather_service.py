@@ -45,9 +45,10 @@ class WeatherService:
         self.cached_weather: WeatherDataSchema | None = None
         self.last_successful_fetch: datetime | None = None
 
-    @property
-    def _stale_threshold(self) -> timedelta:
-        return timedelta(minutes=settings.WEATHER_STALE_THRESHOLD_MINUTES)
+    def _stale_threshold(self, staleness_minutes: int | None = None) -> timedelta:
+        """Get staleness threshold, using provided value or falling back to settings."""
+        minutes = staleness_minutes if staleness_minutes is not None else settings.WEATHER_STALE_THRESHOLD_MINUTES
+        return timedelta(minutes=minutes)
 
     async def fetch_weather_from_api(self) -> WeatherDataSchema:
         """
@@ -135,11 +136,17 @@ class WeatherService:
 
         return self.cached_weather
 
-    def is_weather_stale(self) -> bool:
-        """Determine whether the cached data has exceeded the stale threshold."""
+    def is_weather_stale(self, staleness_minutes: int | None = None) -> bool:
+        """
+        Determine whether the cached data has exceeded the stale threshold.
+
+        Args:
+            staleness_minutes: Optional override for staleness threshold in minutes.
+                              If None, uses settings.WEATHER_STALE_THRESHOLD_MINUTES.
+        """
         if self.last_successful_fetch is None:
             return True
-        return datetime.now(timezone.utc) - self.last_successful_fetch > self._stale_threshold
+        return datetime.now(timezone.utc) - self.last_successful_fetch > self._stale_threshold(staleness_minutes)
 
     @staticmethod
     def _safe_float(value: Any) -> float | None:

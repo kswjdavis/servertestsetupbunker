@@ -47,6 +47,7 @@ export const mockGlobalConfig = {
   default_fan_power_watts: 1500,
   weather_station_id: 'KGCK',
   weather_poll_interval_seconds: 60,
+  weather_staleness_minutes: 3,
   shutdown_broadcast_interval_seconds: 60,
   device_offline_threshold_seconds: 120,
   emergency_on_global: false,
