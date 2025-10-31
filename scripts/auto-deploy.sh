@@ -62,7 +62,7 @@ init_git_repo() {
         log_info "Initializing Git repository..."
         cd "$REPO_DIR"
         git init
-        git remote add $REMOTE https://github.com/wlivsey/bunker-blow.git
+        git remote add $REMOTE https://github.com/kswjdavis/servertestsetupbunker.git
         git fetch $REMOTE $BRANCH
         git checkout -b $BRANCH $REMOTE/$BRANCH
         log_info "Git repository initialized"

@@ -51,7 +51,7 @@ jobs:
             if [ ! -d .git ]; then
               echo "Initializing Git repository..."
               git init
-              git remote add origin https://github.com/wlivsey/bunker-blow.git
+              git remote add origin https://github.com/kswjdavis/servertestsetupbunker.git
               git fetch origin server-main
               git checkout -b server-main origin/server-main
             fi
