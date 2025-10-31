@@ -1,4 +1,5 @@
 """FastAPI application entry point."""
+# Test auto-deployment workflow - October 31, 2025
 
 from __future__ import annotations
 
