@@ -1,0 +1,161 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - server-main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for rollback capability
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Get commit information
+        id: commit_info
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "commit_msg=$(git log -1 --pretty=%B | head -1)" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=%an)" >> $GITHUB_OUTPUT
+
+      - name: Deploy to production server
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SSH_HOST} << 'ENDSSH'
+            set -e
+
+            echo "=========================================="
+            echo "Deployment started at $(date)"
+            echo "=========================================="
+
+            cd /home/bunkercolab/Bunkercolab
+
+            # Initialize Git repository if it doesn't exist
+            if [ ! -d .git ]; then
+              echo "Initializing Git repository..."
+              git init
+              git remote add origin https://github.com/wlivsey/bunker-blow.git
+              git fetch origin server-main
+              git checkout -b server-main origin/server-main
+            fi
+
+            # Store current commit for potential rollback
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            echo "Previous commit: $PREVIOUS_COMMIT"
+
+            # Pull latest changes
+            echo "Pulling latest changes from server-main..."
+            git fetch origin server-main
+            git reset --hard origin/server-main
+
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+            echo "New commit: $CURRENT_COMMIT"
+
+            # Run deployment scripts
+            echo "Running backend deployment..."
+            cd /home/bunkercolab/Bunkercolab
+            ./scripts/deploy-server.sh --skip-git || {
+              echo "ERROR: Backend deployment failed!"
+              echo "Rolling back to $PREVIOUS_COMMIT..."
+              git reset --hard $PREVIOUS_COMMIT
+              ./scripts/deploy-server.sh --skip-git
+              exit 1
+            }
+
+            echo "Running frontend build..."
+            ./scripts/build-web.sh || {
+              echo "ERROR: Frontend build failed!"
+              echo "Rolling back to $PREVIOUS_COMMIT..."
+              git reset --hard $PREVIOUS_COMMIT
+              ./scripts/deploy-server.sh --skip-git
+              ./scripts/build-web.sh
+              exit 1
+            }
+
+            # Health checks
+            echo "Performing health checks..."
+            sleep 5
+
+            # Check backend health
+            if ! curl -f -s http://localhost:8000/healthz > /dev/null; then
+              echo "ERROR: Backend health check failed!"
+              echo "Rolling back to $PREVIOUS_COMMIT..."
+              git reset --hard $PREVIOUS_COMMIT
+              ./scripts/deploy-server.sh --skip-git
+              exit 1
+            fi
+            echo "✓ Backend health check passed"
+
+            # Check if systemd service is running
+            if ! systemctl is-active --quiet bunkercolab; then
+              echo "ERROR: Bunkercolab service is not running!"
+              echo "Rolling back to $PREVIOUS_COMMIT..."
+              git reset --hard $PREVIOUS_COMMIT
+              ./scripts/deploy-server.sh --skip-git
+              exit 1
+            fi
+            echo "✓ Systemd service is running"
+
+            # Check frontend is accessible
+            if ! curl -f -s http://localhost/ > /dev/null; then
+              echo "ERROR: Frontend health check failed!"
+              echo "Rolling back to $PREVIOUS_COMMIT..."
+              git reset --hard $PREVIOUS_COMMIT
+              ./scripts/build-web.sh
+              exit 1
+            fi
+            echo "✓ Frontend health check passed"
+
+            echo "=========================================="
+            echo "Deployment successful at $(date)"
+            echo "Deployed commit: $CURRENT_COMMIT"
+            echo "=========================================="
+          ENDSSH
+
+      - name: Verify deployment
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          echo "Verifying deployment from external network..."
+          sleep 3
+
+          # Check backend
+          if ! curl -f -s http://$SSH_HOST/healthz > /dev/null; then
+            echo "❌ External backend health check failed!"
+            exit 1
+          fi
+          echo "✓ External backend health check passed"
+
+          # Check frontend
+          if ! curl -f -s http://$SSH_HOST/ > /dev/null; then
+            echo "❌ External frontend health check failed!"
+            exit 1
+          fi
+          echo "✓ External frontend health check passed"
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "::notice title=Deployment Successful::Deployed ${{ steps.commit_info.outputs.short_sha }} to production: ${{ steps.commit_info.outputs.commit_msg }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error title=Deployment Failed::Failed to deploy ${{ steps.commit_info.outputs.short_sha }} to production"
