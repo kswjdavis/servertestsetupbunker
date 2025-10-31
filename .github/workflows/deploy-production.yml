@@ -130,21 +130,19 @@ jobs:
           ENDSSH
 
       - name: Verify deployment
-        env:
-          SSH_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           echo "Verifying deployment from external network..."
           sleep 3
 
-          # Check backend
-          if ! curl -f -s http://$SSH_HOST/healthz > /dev/null; then
+          # Check backend (use HTTPS with actual domain)
+          if ! curl -f -s https://bunker.americanagrionics.com/healthz > /dev/null; then
             echo "❌ External backend health check failed!"
             exit 1
           fi
           echo "✓ External backend health check passed"
 
-          # Check frontend
-          if ! curl -f -s http://$SSH_HOST/ > /dev/null; then
+          # Check frontend (use HTTPS with actual domain)
+          if ! curl -f -s https://bunker.americanagrionics.com/ > /dev/null; then
             echo "❌ External frontend health check failed!"
             exit 1
           fi
