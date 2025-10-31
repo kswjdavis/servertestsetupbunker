@@ -10,6 +10,10 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SERVER_DIR="${PROJECT_ROOT}/server"
 VENV_DIR="${SERVER_DIR}/venv"
 ENV_FILE="${SERVER_DIR}/.env.production"
+# Fall back to .env if .env.production doesn't exist
+if [[ ! -f "${ENV_FILE}" ]]; then
+  ENV_FILE="${SERVER_DIR}/.env"
+fi
 SERVICE_NAME="bunkercolab"
 SYSTEMD_TEMPLATE="${PROJECT_ROOT}/config/bunkercolab.service"
 
