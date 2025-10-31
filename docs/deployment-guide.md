@@ -163,7 +163,177 @@ ensures ownership by `www-data`.
 
 ---
 
-## 8. Verification Checklist
+## 8. Automated Git-Based Deployment
+
+**Status:** Implemented as of October 31, 2025
+
+The Bunkercolab project now supports automatic deployment from the `server-main` branch using GitHub Actions with comprehensive health checks and automatic rollback.
+
+### Overview
+
+When code is pushed to the `server-main` branch on GitHub, a GitHub Actions workflow automatically:
+1. SSHs into the production server
+2. Initializes/updates the Git repository
+3. Pulls the latest changes
+4. Runs backend deployment (`deploy-server.sh`)
+5. Builds and deploys the frontend (`build-web.sh`)
+6. Performs health checks (backend, frontend, systemd)
+7. Automatically rolls back on any failure
+
+### GitHub Repository Configuration
+
+**Required GitHub Secrets:**
+
+Navigate to `https://github.com/wlivsey/bunker-blow/settings/secrets/actions` and add:
+
+1. **DEPLOY_SSH_KEY** - Private SSH key for server access (no passphrase)
+2. **DEPLOY_HOST** - Production server IP (`206.189.210.203`)
+3. **DEPLOY_USER** - SSH user (`root` or `bunkercolab`)
+
+### Branch Strategy
+
+- **`main`** - Development and feature integration
+- **`jeff-final-test`** - QA and pre-production testing
+- **`server-main`** - Production deployment branch (auto-deploys)
+
+**Deployment workflow:**
+```bash
+# Make changes on feature branch
+git checkout -b feature/my-changes
+# ... make changes ...
+git commit -m "Add feature"
+git push origin feature/my-changes
+
+# Merge to jeff-final-test for testing
+git checkout jeff-final-test
+git merge feature/my-changes
+
+# When ready to deploy to production
+git checkout server-main
+git merge jeff-final-test
+git push origin server-main  # Triggers auto-deployment
+```
+
+### Manual Deployment Options
+
+**Option 1: Trigger via Git push (recommended)**
+```bash
+git checkout server-main
+git merge jeff-final-test  # Or cherry-pick specific commits
+git push origin server-main
+```
+
+**Option 2: Run auto-deploy script on server**
+```bash
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203
+cd /home/bunkercolab/Bunkercolab
+./scripts/auto-deploy.sh
+```
+
+**Option 3: Traditional manual deployment**
+```bash
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203
+cd /home/bunkercolab/Bunkercolab
+git pull origin server-main
+./scripts/deploy-server.sh --skip-git
+./scripts/build-web.sh
+```
+
+### Health Checks
+
+The deployment workflow performs the following health checks:
+
+1. **Backend API Health**
+   - `curl -f http://localhost:8000/healthz`
+   - Retries: 3 attempts with 2-second delays
+
+2. **Systemd Service Status**
+   - `systemctl is-active bunkercolab`
+   - Verifies service is running
+
+3. **Frontend Accessibility**
+   - `curl -f http://localhost/`
+   - Confirms nginx is serving content
+
+4. **External Verification**
+   - Checks from GitHub Actions runner (external network)
+   - Verifies public accessibility
+
+### Automatic Rollback
+
+If any health check fails, the deployment automatically:
+1. Reverts Git repository to previous commit
+2. Re-runs deployment scripts
+3. Verifies rollback succeeded
+4. Logs failure for investigation
+
+**Rollback logs location:** `/var/log/bunkercolab/auto-deploy.log`
+
+### Monitoring Deployments
+
+**View GitHub Actions runs:**
+- https://github.com/wlivsey/bunker-blow/actions
+
+**Check deployment logs on server:**
+```bash
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203
+tail -f /var/log/bunkercolab/auto-deploy.log
+```
+
+**Check service status:**
+```bash
+ssh -i SSH_Key/.ssh/deploy_key bunkercolab@206.189.210.203
+sudo systemctl status bunkercolab
+sudo journalctl -u bunkercolab -f
+```
+
+### Security Hardening
+
+After setting up auto-deployment, run the security hardening script:
+
+```bash
+ssh -i SSH_Key/.ssh/deploy_key root@206.189.210.203
+cd /home/bunkercolab/Bunkercolab
+sudo ./scripts/harden-security.sh
+```
+
+This script:
+- Fixes file ownership issues (sets bunkercolab:bunkercolab)
+- Restricts sudo permissions to deployment-specific commands only
+- Creates deployment log directory with proper permissions
+- Validates configuration
+
+**Restricted sudo commands after hardening:**
+- `systemctl restart/reload/status/is-active bunkercolab`
+- `nginx -t`
+- `systemctl reload nginx`
+- Directory creation/ownership for `/var/log/bunkercolab`
+
+### Troubleshooting Auto-Deployment
+
+**Deployment fails with "Permission denied":**
+- Verify GitHub secrets are configured correctly
+- Check SSH key has no passphrase
+- Ensure bunkercolab user can access /home/bunkercolab/Bunkercolab
+
+**Health checks fail after successful deployment:**
+- Check service logs: `sudo journalctl -u bunkercolab -n 50`
+- Verify .env file configuration
+- Check database connectivity
+- Review nginx error logs: `sudo tail /var/log/nginx/error.log`
+
+**Rollback doesn't restore functionality:**
+- Manually inspect service status: `sudo systemctl status bunkercolab`
+- Check for database migration issues
+- Review rollback logs: `cat /var/log/bunkercolab/auto-deploy.log`
+
+**Want to skip auto-deployment for a push:**
+- Use a different branch (not `server-main`)
+- Or temporarily disable the GitHub Actions workflow
+
+---
+
+## 9. Verification Checklist
 
 - `curl https://bunkercolab.example.com/api/healthz` returns `{"status":"ok"}`
 - React UI loads over HTTPS without mixed-content issues
@@ -173,7 +343,7 @@ ensures ownership by `www-data`.
 
 ---
 
-## 9. Rollback Procedure
+## 10. Rollback Procedure
 
 Use the rollback helper to reset the repository to a known good commit or tag:
 
