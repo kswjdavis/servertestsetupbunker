@@ -1,5 +1,5 @@
 """FastAPI application entry point."""
-# Test auto-deployment workflow - All Sudo Permissions Fixed
+# Test auto-deployment workflow - Full E2E test with frontend build
 
 from __future__ import annotations
 
