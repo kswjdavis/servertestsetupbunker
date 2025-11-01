@@ -10,7 +10,7 @@ Group=__DEPLOY_USER__
 WorkingDirectory=__PROJECT_ROOT__/server
 Environment="PATH=__PROJECT_ROOT__/server/venv/bin"
 Environment="PYTHONPATH=__PROJECT_ROOT__/server"
-EnvironmentFile=__PROJECT_ROOT__/server/.env.production
+EnvironmentFile=__PROJECT_ROOT__/server/.env
 ExecStart=__PROJECT_ROOT__/server/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
 Restart=always
 RestartSec=5
