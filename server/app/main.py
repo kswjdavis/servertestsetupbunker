@@ -1,5 +1,5 @@
 """FastAPI application entry point."""
-# Test auto-deployment workflow - SSH Key Authorized
+# Test auto-deployment workflow - Permissions Fixed
 
 from __future__ import annotations
 
