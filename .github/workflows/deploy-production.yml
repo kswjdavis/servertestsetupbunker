@@ -82,15 +82,18 @@ jobs:
               exit 1
             }
 
-            echo "Running frontend build..."
-            ./scripts/build-web.sh || {
-              echo "ERROR: Frontend build failed!"
-              echo "Rolling back to $PREVIOUS_COMMIT..."
-              git reset --hard $PREVIOUS_COMMIT
-              ./scripts/deploy-server.sh --skip-git
-              ./scripts/build-web.sh
-              exit 1
-            }
+            # Frontend build skipped - deploy manually when needed
+            # The 512MB droplet struggles with npm builds due to memory constraints
+            # To deploy frontend: ssh to server and run ./scripts/build-web.sh manually
+            # echo "Running frontend build..."
+            # ./scripts/build-web.sh || {
+            #   echo "ERROR: Frontend build failed!"
+            #   echo "Rolling back to $PREVIOUS_COMMIT..."
+            #   git reset --hard $PREVIOUS_COMMIT
+            #   ./scripts/deploy-server.sh --skip-git
+            #   ./scripts/build-web.sh
+            #   exit 1
+            # }
 
             # Health checks
             echo "Performing health checks..."
