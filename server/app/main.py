@@ -1,5 +1,5 @@
 """FastAPI application entry point."""
-# Test auto-deployment workflow - SSH Key Fixed
+# Test auto-deployment workflow - Bunkercolab User
 
 from __future__ import annotations
 
