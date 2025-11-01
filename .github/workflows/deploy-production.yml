@@ -55,7 +55,8 @@ jobs:
               git config --global --add safe.directory /home/bunkercolab/Bunkercolab
               git remote add origin https://github.com/kswjdavis/servertestsetupbunker.git
               git fetch origin server-main
-              git checkout -b server-main origin/server-main
+              # Force checkout on first run to overwrite rsync-deployed files
+              git checkout -f -b server-main origin/server-main
             fi
 
             # Store current commit for potential rollback

@@ -66,7 +66,8 @@ init_git_repo() {
         git config --global --add safe.directory $REPO_DIR
         git remote add $REMOTE https://github.com/kswjdavis/servertestsetupbunker.git
         git fetch $REMOTE $BRANCH
-        git checkout -b $BRANCH $REMOTE/$BRANCH
+        # Force checkout on first run to overwrite existing files
+        git checkout -f -b $BRANCH $REMOTE/$BRANCH
         log_info "Git repository initialized"
     fi
 }
