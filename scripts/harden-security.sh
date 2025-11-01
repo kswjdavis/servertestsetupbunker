@@ -71,6 +71,13 @@ bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
 # Systemd service file installation
 bunkercolab ALL=(ALL) NOPASSWD: /usr/bin/tee /etc/systemd/system/bunkercolab.service
 
+# Frontend deployment
+bunkercolab ALL=(ALL) NOPASSWD: /bin/mkdir -p /var/www/bunkercolab
+bunkercolab ALL=(ALL) NOPASSWD: /bin/rm -rf /var/www/bunkercolab/*
+bunkercolab ALL=(ALL) NOPASSWD: /bin/cp -r * /var/www/bunkercolab/
+bunkercolab ALL=(ALL) NOPASSWD: /bin/chown -R www-data\:www-data /var/www/bunkercolab
+bunkercolab ALL=(ALL) NOPASSWD: /usr/bin/find /var/www/bunkercolab *
+
 # Log directory management
 bunkercolab ALL=(ALL) NOPASSWD: /bin/mkdir -p /var/log/bunkercolab
 bunkercolab ALL=(ALL) NOPASSWD: /bin/chown bunkercolab\:bunkercolab /var/log/bunkercolab
