@@ -57,6 +57,8 @@ cat > /etc/sudoers.d/bunkercolab << 'EOSUDO'
 # Allows only necessary commands for auto-deployment
 
 # Service management
+bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl daemon-reload
+bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl enable bunkercolab
 bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl restart bunkercolab
 bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl reload bunkercolab
 bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl status bunkercolab
@@ -65,6 +67,9 @@ bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl is-active bunkercolab
 # Nginx management
 bunkercolab ALL=(ALL) NOPASSWD: /usr/sbin/nginx -t
 bunkercolab ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
+
+# Systemd service file installation
+bunkercolab ALL=(ALL) NOPASSWD: /usr/bin/tee /etc/systemd/system/bunkercolab.service
 
 # Log directory management
 bunkercolab ALL=(ALL) NOPASSWD: /bin/mkdir -p /var/log/bunkercolab
@@ -138,9 +143,10 @@ log_info "  ✓ Script permissions configured"
 log_info ""
 log_info "Note: bunkercolab user can no longer run arbitrary sudo commands."
 log_info "Allowed sudo commands:"
-log_info "  - systemctl restart/reload/status bunkercolab"
+log_info "  - systemctl daemon-reload/enable/restart/reload/status/is-active bunkercolab"
 log_info "  - nginx -t"
 log_info "  - systemctl reload nginx"
+log_info "  - tee /etc/systemd/system/bunkercolab.service"
 log_info "  - mkdir/chown for /var/log/bunkercolab"
 log_info ""
 log_warn "IMPORTANT: Test deployments after these changes!"
