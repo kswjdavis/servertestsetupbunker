@@ -131,7 +131,7 @@ fi
 
 log "Deployment complete. Checking service status..."
 sleep 2
-sudo systemctl status "${SERVICE_NAME}" --no-pager || true
+systemctl status "${SERVICE_NAME}" --no-pager || true
 
 echo
 echo "=== Deployment Summary ==="
