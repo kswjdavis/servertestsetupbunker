@@ -62,6 +62,8 @@ init_git_repo() {
         log_info "Initializing Git repository..."
         cd "$REPO_DIR"
         git init
+        sudo chown -R bunkercolab:bunkercolab .git
+        git config --global --add safe.directory $REPO_DIR
         git remote add $REMOTE https://github.com/kswjdavis/servertestsetupbunker.git
         git fetch $REMOTE $BRANCH
         git checkout -b $BRANCH $REMOTE/$BRANCH

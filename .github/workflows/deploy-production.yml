@@ -51,6 +51,8 @@ jobs:
             if [ ! -d .git ]; then
               echo "Initializing Git repository..."
               git init
+              chown -R bunkercolab:bunkercolab .git
+              git config --global --add safe.directory /home/bunkercolab/Bunkercolab
               git remote add origin https://github.com/kswjdavis/servertestsetupbunker.git
               git fetch origin server-main
               git checkout -b server-main origin/server-main
